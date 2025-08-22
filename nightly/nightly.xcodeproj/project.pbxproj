@@ -45,11 +45,6 @@
 			path = nightlyUITests;
 			sourceTree = "<group>";
 		};
-		A3F3008D2E59155E00D8907C /* Documents */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Documents;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,7 +75,6 @@
 		A3F300592E59129200D8907C = {
 			isa = PBXGroup;
 			children = (
-				A3F3008D2E59155E00D8907C /* Documents */,
 				A3F300642E59129200D8907C /* nightly */,
 				A3F300722E59129400D8907C /* nightlyTests */,
 				A3F3007C2E59129400D8907C /* nightlyUITests */,
@@ -115,7 +109,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				A3F300642E59129200D8907C /* nightly */,
-				A3F3008D2E59155E00D8907C /* Documents */,
 			);
 			name = nightly;
 			packageProductDependencies = (
