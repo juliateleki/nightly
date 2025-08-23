@@ -1,7 +1,7 @@
 # Nightly Inventory
 An app to help users complete their nightly inventory
 
-Adresses the following 4 character defects: resentment, selfishness, dishonesty, and fear.
+Addresses the following 4 character defects: resentment, selfishness, dishonesty, and fear.
 
 # Nightly Inventory Questions:
   + Were we resentful?
