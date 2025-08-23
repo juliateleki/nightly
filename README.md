@@ -14,3 +14,4 @@ Adresses the following 4 character defects: resentment, selfishness, dishonesty,
   + What could we have done better?
   + Were we thinking of ourselves most of the time?
   + Or were we thinking of what we could do for others, of what we could pack into the stream of life?
+  + What are you grateful for today?"
