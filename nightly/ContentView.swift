@@ -125,7 +125,7 @@ struct NewNightlyView: View {
 
   // Edit questions freely; the UI will stay in sync.
   private let questions: [String] = [
-    "Were we resentful?",
+    "Were we resentful? Did we tell anyone or did we hold it in? If so, have we considered 10th stepping?",
     "Were we selfish?",
     "Were we dishonest?",
     "Were we deleusional?",
