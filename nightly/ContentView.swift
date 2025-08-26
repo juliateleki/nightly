@@ -15,12 +15,7 @@ struct NightlyEntry: Identifiable, Codable, Equatable {
   let questions: [String]
   let answers: [String]
 
-  init(
-    id: UUID = UUID(),
-    date: Date = Date(),
-    questions: [String],
-    answers: [String]
-  ) {
+  init(id: UUID = UUID(), date: Date = Date(), questions: [String], answers: [String]) {
     self.id = id
     self.date = date
     self.questions = questions
@@ -52,10 +47,7 @@ final class NightlyStore: ObservableObject {
   @Published private(set) var entries: [NightlyEntry] = []
 
   private let fileURL: URL = {
-    let dir = FileManager.default.urls(
-      for: .documentDirectory,
-      in: .userDomainMask
-    ).first!
+    let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     return dir.appendingPathComponent("nightly_entries.json")
   }()
 
@@ -63,7 +55,7 @@ final class NightlyStore: ObservableObject {
 
   func add(questions: [String], answers: [String]) {
     let entry = NightlyEntry(questions: questions, answers: answers)
-    entries.insert(entry, at: 0)  // newest first
+    entries.insert(entry, at: 0) // newest first
     save()
   }
 
@@ -100,35 +92,142 @@ final class NightlyStore: ObservableObject {
   }
 }
 
-// MARK: - Root Tabs
+// MARK: - Menu
 
-struct ContentView: View {
-  @StateObject private var store = NightlyStore()
-
-  var body: some View {
-    TabView {
-      NewNightlyView()
-        .environmentObject(store)
-        .tabItem { Label("New", systemImage: "square.and.pencil") }
-
-      HistoryView()
-        .environmentObject(store)
-        .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+enum MenuItem: String, CaseIterable, Identifiable {
+  case new = "New Nightly"
+  case history = "Past Nightlies"
+  case sobriety = "Sobriety Counter"
+  var id: String { rawValue }
+  var systemImage: String {
+    switch self {
+      case .new: return "square.and.pencil"
+      case .history: return "clock.arrow.circlepath"
+      case .sobriety: return "heart.text.square"
     }
   }
 }
 
-// MARK: - New Nightly
+// MARK: - Root Shell with Hamburger
+
+struct ContentView: View {
+  @StateObject private var store = NightlyStore()
+  @State private var selection: MenuItem = .new
+  @State private var isMenuOpen: Bool = false
+
+  var body: some View {
+    NavigationStack {
+      ZStack(alignment: .leading) {
+        // Main content
+        Group {
+          switch selection {
+            case .new:
+              NewNightlyView()
+                .environmentObject(store)
+                .navigationTitle("Nightly Inventory")
+            case .history:
+              HistoryView()
+                .environmentObject(store)
+                .navigationTitle("History")
+            case .sobriety:
+              SobrietyCounterView()
+                .navigationTitle("Sobriety Counter")
+          }
+        }
+        .toolbar {
+          ToolbarItem(placement: .topBarLeading) {
+            Button {
+              withAnimation(.easeInOut(duration: 0.2)) { isMenuOpen.toggle() }
+            } label: {
+              Image(systemName: "line.3.horizontal")
+            }
+            .accessibilityLabel("Menu")
+          }
+        }
+
+        // Dim overlay when menu open
+        if isMenuOpen {
+          Color.black.opacity(0.25)
+            .ignoresSafeArea()
+            .onTapGesture {
+              withAnimation(.easeInOut(duration: 0.2)) { isMenuOpen = false }
+            }
+        }
+
+        // Side menu panel
+        SideMenu(isOpen: $isMenuOpen, selection: $selection)
+      }
+    }
+  }
+}
+
+struct SideMenu: View {
+  @Binding var isOpen: Bool
+  @Binding var selection: MenuItem
+
+  private let width: CGFloat = 280
+
+  var body: some View {
+    ZStack(alignment: .leading) {
+      // Panel
+      VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 10) {
+          Image(systemName: "moon.stars.fill")
+          Text("nightly")
+            .font(.title3.weight(.semibold))
+        }
+        .padding(.bottom, 16)
+
+        ForEach(MenuItem.allCases) { item in
+          Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+              selection = item
+              isOpen = false
+            }
+          } label: {
+            HStack(spacing: 12) {
+              Image(systemName: item.systemImage)
+              Text(item.rawValue)
+              Spacer()
+              if item == selection {
+                Image(systemName: "checkmark")
+                  .foregroundStyle(.secondary)
+              }
+            }
+            .padding(12)
+            .background(
+              RoundedRectangle(cornerRadius: 12)
+                .fill(item == selection ? Color.accentColor.opacity(0.12) : .clear)
+            )
+          }
+          .buttonStyle(.plain)
+        }
+
+        Spacer()
+      }
+      .padding(.top, 20)
+      .padding(.horizontal, 16)
+      .frame(width: width)
+      .frame(maxHeight: .infinity, alignment: .top)
+      .background(.ultraThinMaterial)
+      .shadow(radius: 8)
+      .offset(x: isOpen ? 0 : -width)
+      .ignoresSafeArea(edges: .vertical)
+    }
+    .animation(.easeInOut(duration: 0.2), value: isOpen)
+  }
+}
+
+// MARK: - New Nightly (no inner NavigationStack)
 
 struct NewNightlyView: View {
   @EnvironmentObject private var store: NightlyStore
 
-  // Edit questions freely; the UI will stay in sync.
   private let questions: [String] = [
-    "Were we resentful? Did we tell anyone or did we hold it in? If so, have we considered 10th stepping?",
+    "Were we resentful?",
     "Were we selfish?",
     "Were we dishonest?",
-    "Were we deleusional?",
+    "Were we delusional",
     "Were we afraid?",
     "Do we owe an apology?",
     "Have we kept something to ourselves which should be discussed with another person at once?",
@@ -137,66 +236,48 @@ struct NewNightlyView: View {
     "Were we thinking of ourselves most of the time?",
     "Or were we thinking of what we could do for others, of what we could pack into the stream of life?",
     "What are we grateful for today?",
-    "What are our corrective measures?",
+    "What are our corrective measures?"
   ]
 
-  // Initialize answers based on questions.count (not a fixed number)
   @State private var answers: [String]
   @State private var showingSaved = false
 
   init() {
-    _answers = State(initialValue: Array(repeating: "", count: questions.count))
+    _answers = State(initialValue: Array(repeating: "", count: 12))
   }
 
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(spacing: 20) {
-          ForEach(questions.indices, id: \.self) { i in
-            QuestionCard(
-              question: questions[i],
-              answer: bindingForAnswer(i)  // safe binding
-            )
-          }
+    ScrollView {
+      VStack(spacing: 20) {
+        ForEach(questions.indices, id: \.self) { i in
+          QuestionCard(question: questions[i], answer: bindingForAnswer(i))
+        }
 
-          Button(action: saveNightly) {
-            HStack(spacing: 8) {
-              Image(systemName: "tray.and.arrow.down")
-              Text("Save Nightly").fontWeight(.semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(.tint.opacity(0.15))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+        Button(action: saveNightly) {
+          HStack(spacing: 8) {
+            Image(systemName: "tray.and.arrow.down")
+            Text("Save Nightly").fontWeight(.semibold)
           }
-          .padding(.top)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 12)
+          .background(.tint.opacity(0.15))
+          .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .padding()
+        .padding(.top)
       }
-      .navigationTitle("Nightly Inventory")
-      .toolbar {
-        ToolbarItemGroup(placement: .keyboard) {
-          Spacer()
-          Button("Done") { endEditing() }
-        }
-      }
-      .alert("Saved!", isPresented: $showingSaved) {
-        Button("OK", role: .cancel) {}
-      } message: {
-        Text("Your nightly has been added to History.")
-      }
-      // If you hot-edit questions and the view stays alive, keep arrays in sync:
-      .onAppear { ensureAnswerCapacity() }
+      .padding()
     }
+    .alert("Saved!", isPresented: $showingSaved) {
+      Button("OK", role: .cancel) { }
+    } message: {
+      Text("Your nightly has been added to History.")
+    }
+    .onAppear { ensureAnswerCapacity() }
   }
 
-  // Defensive binding that grows the array if needed (prevents out-of-range)
   private func bindingForAnswer(_ i: Int) -> Binding<String> {
     Binding(
-      get: {
-        if i < answers.count { return answers[i] }
-        return ""
-      },
+      get: { i < answers.count ? answers[i] : "" },
       set: { newValue in
         if i >= answers.count {
           answers.append(contentsOf: Array(repeating: "", count: i - answers.count + 1))
@@ -207,36 +288,30 @@ struct NewNightlyView: View {
   }
 
   private func ensureAnswerCapacity() {
-    if answers.count != questions.count {
-      if answers.count < questions.count {
-        answers.append(contentsOf: Array(repeating: "", count: questions.count - answers.count))
-      } else {
-        answers = Array(answers.prefix(questions.count))
-      }
+    if answers.count < questions.count {
+      answers.append(contentsOf: Array(repeating: "", count: questions.count - answers.count))
+    } else if answers.count > questions.count {
+      answers = Array(answers.prefix(questions.count))
     }
   }
 
   private func saveNightly() {
-    // Save exactly one answer per question (no index errors)
     let trimmed: [String] = (0..<questions.count).map { i in
       (i < answers.count ? answers[i] : "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
-
     guard trimmed.contains(where: { !$0.isEmpty }) else { return }
     store.add(questions: questions, answers: trimmed)
-
-    // Reset for the next nightly, matching the current question count
     answers = Array(repeating: "", count: questions.count)
     showingSaved = true
     endEditing()
   }
 }
 
-// Small helper to dismiss keyboard (no FocusState needed)
+// Dismiss keyboard helper
 private func endEditing() {
-  #if canImport(UIKit)
+#if canImport(UIKit)
   UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-  #endif
+#endif
 }
 
 // MARK: - Question Card
@@ -260,12 +335,10 @@ struct QuestionCard: View {
           .padding(8)
           .frame(minHeight: 110)
           .background(
-            RoundedRectangle(cornerRadius: 12)
-              .fill(Color(.systemBackground))
+            RoundedRectangle(cornerRadius: 12).fill(Color(.systemBackground))
           )
           .overlay(
-            RoundedRectangle(cornerRadius: 12)
-              .stroke(.quaternary, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12).stroke(.quaternary, lineWidth: 1)
           )
           .scrollContentBackground(.hidden)
           .textInputAutocapitalization(.sentences)
@@ -275,49 +348,46 @@ struct QuestionCard: View {
   }
 }
 
-// MARK: - History List
+// MARK: - History
 
 struct HistoryView: View {
   @EnvironmentObject private var store: NightlyStore
   @State private var query = ""
 
   var body: some View {
-    NavigationStack {
-      Group {
-        if filteredEntries.isEmpty {
-          if #available(iOS 17, *) {
-            ContentUnavailableView(
-              "No Nightlies Yet",
-              systemImage: "tray",
-              description: Text("Nightlies you save will appear here. Create one from the New tab.")
-            )
-          } else {
-            VStack(spacing: 8) {
-              Image(systemName: "tray")
-              Text("No Nightlies Yet").font(.headline)
-              Text("Nightlies you save will appear here. Create one from the New tab.")
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            }.padding()
-          }
+    Group {
+      if filteredEntries.isEmpty {
+        if #available(iOS 17, *) {
+          ContentUnavailableView(
+            "No Nightlies Yet",
+            systemImage: "tray",
+            description: Text("Nightlies you save will appear here. Create one from the New tab.")
+          )
         } else {
-          List {
-            ForEach(filteredEntries) { entry in
-              NavigationLink {
-                NightlyDetailView(entryID: entry.id)   // pass ID, read live from store
-              } label: {
-                HistoryRow(entry: entry)
-              }
-            }
-            .onDelete(perform: store.delete)
-          }
-          .listStyle(.insetGrouped)
+          VStack(spacing: 8) {
+            Image(systemName: "tray")
+            Text("No Nightlies Yet").font(.headline)
+            Text("Nightlies you save will appear here. Create one from the New tab.")
+              .foregroundStyle(.secondary)
+              .multilineTextAlignment(.center)
+              .padding(.horizontal)
+          }.padding()
         }
+      } else {
+        List {
+          ForEach(filteredEntries) { entry in
+            NavigationLink {
+              NightlyDetailView(entryID: entry.id)
+            } label: {
+              HistoryRow(entry: entry)
+            }
+          }
+          .onDelete(perform: store.delete)
+        }
+        .listStyle(.insetGrouped)
       }
-      .navigationTitle("History")
-      .searchable(text: $query, placement: .navigationBarDrawer, prompt: "Search answers")
     }
+    .searchable(text: $query, placement: .navigationBarDrawer, prompt: "Search answers")
   }
 
   private var filteredEntries: [NightlyEntry] {
@@ -345,13 +415,11 @@ struct HistoryRow: View {
   }
 
   private func previewText(for entry: NightlyEntry) -> String {
-    entry.answers.first {
-      !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    } ?? "No answers recorded."
+    entry.answers.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? "No answers recorded."
   }
 }
 
-// MARK: - Detail (with Share + Edit)
+// MARK: - Detail (keeps Share + Edit)
 
 struct NightlyDetailView: View {
   @EnvironmentObject private var store: NightlyStore
@@ -450,10 +518,7 @@ struct EditNightlyView: View {
       ScrollView {
         VStack(spacing: 20) {
           ForEach(questions.indices, id: \.self) { i in
-            QuestionCard(
-              question: questions[i],
-              answer: bindingForAnswer(i)
-            )
+            QuestionCard(question: questions[i], answer: bindingForAnswer(i))
           }
           Button {
             saveChanges()
@@ -486,13 +551,10 @@ struct EditNightlyView: View {
     guard questions.isEmpty else { return }
     guard let entry = store.entries.first(where: { $0.id == entryID }) else { return }
     questions = entry.questions
-    // Ensure answers count matches questions
     let trimmed = entry.answers.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-    if trimmed.count < questions.count {
-      answers = trimmed + Array(repeating: "", count: questions.count - trimmed.count)
-    } else {
-      answers = Array(trimmed.prefix(questions.count))
-    }
+    answers = trimmed.count < questions.count
+      ? trimmed + Array(repeating: "", count: questions.count - trimmed.count)
+      : Array(trimmed.prefix(questions.count))
   }
 
   private func bindingForAnswer(_ i: Int) -> Binding<String> {
@@ -508,12 +570,101 @@ struct EditNightlyView: View {
   }
 
   private func saveChanges() {
-    // Persist exactly one answer per question
     let cleaned = (0..<questions.count).map { i in
       (i < answers.count ? answers[i] : "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
     store.updateAnswers(for: entryID, answers: cleaned)
     dismiss()
+  }
+}
+
+// MARK: - Sobriety Counter
+
+struct SobrietyCounterView: View {
+  // Store as a unix timestamp (seconds) so @AppStorage works cleanly
+  @AppStorage("sobrietyStart_ts") private var sobrietyStartTS: Double = 0
+  @State private var showingPicker = false
+  @State private var tempDate: Date = Date()
+
+  private var sobrietyStart: Date? {
+    sobrietyStartTS > 0 ? Date(timeIntervalSince1970: sobrietyStartTS) : nil
+  }
+
+  private var daysSober: Int? {
+    guard let start = sobrietyStart else { return nil }
+    return Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: start), to: Calendar.current.startOfDay(for: Date())).day
+  }
+
+  var body: some View {
+    VStack(spacing: 20) {
+      if let days = daysSober {
+        Text("\(days) days sober")
+          .font(.system(size: 40, weight: .bold, design: .rounded))
+        if let start = sobrietyStart {
+          Text("Since \(DF.long.string(from: start))")
+            .foregroundStyle(.secondary)
+        }
+      } else {
+        Text("No sobriety date set")
+          .font(.title3.weight(.semibold))
+          .foregroundStyle(.secondary)
+      }
+
+      HStack(spacing: 12) {
+        Button {
+          if let start = sobrietyStart {
+            tempDate = start
+          } else {
+            tempDate = Date()
+          }
+          showingPicker = true
+        } label: {
+          Label(sobrietyStart == nil ? "Set Sobriety Date" : "Change Date", systemImage: "calendar")
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.tint.opacity(0.15))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+
+        if sobrietyStart != nil {
+          Button(role: .destructive) {
+            sobrietyStartTS = 0
+          } label: {
+            Label("Clear", systemImage: "xmark.circle")
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 12)
+              .background(Color.red.opacity(0.12))
+              .clipShape(RoundedRectangle(cornerRadius: 12))
+          }
+        }
+      }
+
+      Spacer()
+    }
+    .padding()
+    .sheet(isPresented: $showingPicker) {
+      NavigationStack {
+        VStack(alignment: .leading, spacing: 16) {
+          DatePicker("Sobriety start date", selection: $tempDate, displayedComponents: [.date])
+            .datePickerStyle(.graphical)
+            .padding(.top)
+          Spacer()
+        }
+        .padding()
+        .navigationTitle("Set Date")
+        .toolbar {
+          ToolbarItem(placement: .topBarLeading) {
+            Button("Cancel") { showingPicker = false }
+          }
+          ToolbarItem(placement: .topBarTrailing) {
+            Button("Save") {
+              sobrietyStartTS = tempDate.timeIntervalSince1970
+              showingPicker = false
+            }.bold()
+          }
+        }
+      }
+    }
   }
 }
 
