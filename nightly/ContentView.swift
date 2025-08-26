@@ -72,6 +72,14 @@ final class NightlyStore: ObservableObject {
     save()
   }
 
+  /// Update only the answers of an existing entry (keeps date/questions snapshot)
+  func updateAnswers(for entryID: UUID, answers: [String]) {
+    guard let idx = entries.firstIndex(where: { $0.id == entryID }) else { return }
+    let old = entries[idx]
+    entries[idx] = NightlyEntry(id: old.id, date: old.date, questions: old.questions, answers: answers)
+    save()
+  }
+
   private func save() {
     do {
       let data = try JSONEncoder().encode(entries)
@@ -127,8 +135,8 @@ struct NewNightlyView: View {
     "What could we have done better?",
     "Were we thinking of ourselves most of the time?",
     "Or were we thinking of what we could do for others, of what we could pack into the stream of life?",
-    "What are you grateful for today?",
-    "What are your corrective measures?",
+    "What are we grateful for today?",
+    "What are our corrective measures?",
   ]
 
   // Initialize answers based on questions.count (not a fixed number)
@@ -190,9 +198,7 @@ struct NewNightlyView: View {
       },
       set: { newValue in
         if i >= answers.count {
-          answers.append(
-            contentsOf: Array(repeating: "", count: i - answers.count + 1)
-          )
+          answers.append(contentsOf: Array(repeating: "", count: i - answers.count + 1))
         }
         answers[i] = newValue
       }
@@ -202,12 +208,7 @@ struct NewNightlyView: View {
   private func ensureAnswerCapacity() {
     if answers.count != questions.count {
       if answers.count < questions.count {
-        answers.append(
-          contentsOf: Array(
-            repeating: "",
-            count: questions.count - answers.count
-          )
-        )
+        answers.append(contentsOf: Array(repeating: "", count: questions.count - answers.count))
       } else {
         answers = Array(answers.prefix(questions.count))
       }
@@ -217,9 +218,7 @@ struct NewNightlyView: View {
   private func saveNightly() {
     // Save exactly one answer per question (no index errors)
     let trimmed: [String] = (0..<questions.count).map { i in
-      (i < answers.count ? answers[i] : "").trimmingCharacters(
-        in: .whitespacesAndNewlines
-      )
+      (i < answers.count ? answers[i] : "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     guard trimmed.contains(where: { !$0.isEmpty }) else { return }
@@ -235,12 +234,7 @@ struct NewNightlyView: View {
 // Small helper to dismiss keyboard (no FocusState needed)
 private func endEditing() {
   #if canImport(UIKit)
-    UIApplication.shared.sendAction(
-      #selector(UIResponder.resignFirstResponder),
-      to: nil,
-      from: nil,
-      for: nil
-    )
+  UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
   #endif
 }
 
@@ -294,27 +288,23 @@ struct HistoryView: View {
             ContentUnavailableView(
               "No Nightlies Yet",
               systemImage: "tray",
-              description: Text(
-                "Nightlies you save will appear here. Create one from the New tab."
-              )
+              description: Text("Nightlies you save will appear here. Create one from the New tab.")
             )
           } else {
             VStack(spacing: 8) {
               Image(systemName: "tray")
               Text("No Nightlies Yet").font(.headline)
-              Text(
-                "Nightlies you save will appear here. Create one from the New tab."
-              )
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-              .padding(.horizontal)
+              Text("Nightlies you save will appear here. Create one from the New tab.")
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
             }.padding()
           }
         } else {
           List {
             ForEach(filteredEntries) { entry in
               NavigationLink {
-                NightlyDetailView(entry: entry)
+                NightlyDetailView(entryID: entry.id)   // pass ID, read live from store
               } label: {
                 HistoryRow(entry: entry)
               }
@@ -325,11 +315,7 @@ struct HistoryView: View {
         }
       }
       .navigationTitle("History")
-      .searchable(
-        text: $query,
-        placement: .navigationBarDrawer,
-        prompt: "Search answers"
-      )
+      .searchable(text: $query, placement: .navigationBarDrawer, prompt: "Search answers")
     }
   }
 
@@ -338,7 +324,7 @@ struct HistoryView: View {
     guard !q.isEmpty else { return store.entries }
     return store.entries.filter { entry in
       DF.full.string(from: entry.date).lowercased().contains(q)
-        || entry.answers.contains { $0.lowercased().contains(q) }
+      || entry.answers.contains { $0.lowercased().contains(q) }
     }
   }
 }
@@ -364,40 +350,169 @@ struct HistoryRow: View {
   }
 }
 
-// MARK: - Detail
+// MARK: - Detail (with Share + Edit)
 
 struct NightlyDetailView: View {
-  let entry: NightlyEntry
+  @EnvironmentObject private var store: NightlyStore
+  let entryID: UUID
+
+  @State private var showingEditor = false
+
+  private var entryIndex: Int? { store.entries.firstIndex(where: { $0.id == entryID }) }
+  private var entry: NightlyEntry? { entryIndex.map { store.entries[$0] } }
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
-        Text(DF.long.string(from: entry.date))
-          .font(.title2.weight(.semibold))
+    Group {
+      if let entry {
+        ScrollView {
+          VStack(alignment: .leading, spacing: 16) {
+            Text(DF.long.string(from: entry.date))
+              .font(.title2.weight(.semibold))
 
-        ForEach(entry.questions.indices, id: \.self) { i in
-          VStack(alignment: .leading, spacing: 8) {
-            Text(entry.questions[i]).font(.headline)
-            Text(answer(at: i))
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(12)
-              .background(
-                RoundedRectangle(cornerRadius: 12)
-                  .fill(Color(.secondarySystemBackground))
-              )
+            ForEach(entry.questions.indices, id: \.self) { i in
+              VStack(alignment: .leading, spacing: 8) {
+                Text(entry.questions[i]).font(.headline)
+                Text(answerText(entry: entry, index: i))
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .padding(12)
+                  .background(
+                    RoundedRectangle(cornerRadius: 12)
+                      .fill(Color(.secondarySystemBackground))
+                  )
+              }
+            }
+          }
+          .padding()
+        }
+        .navigationTitle("Nightly Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItemGroup(placement: .topBarTrailing) {
+            ShareLink(item: shareText(for: entry)) {
+              Image(systemName: "square.and.arrow.up")
+            }
+            Button {
+              showingEditor = true
+            } label: {
+              Image(systemName: "pencil")
+            }
+            .accessibilityLabel("Edit")
           }
         }
+        .sheet(isPresented: $showingEditor) {
+          EditNightlyView(entryID: entry.id)
+            .environmentObject(store)
+        }
+      } else {
+        if #available(iOS 17, *) {
+          ContentUnavailableView("Entry not found", systemImage: "exclamationmark.triangle")
+        } else {
+          Text("Entry not found").foregroundStyle(.secondary)
+        }
       }
-      .padding()
     }
-    .navigationTitle("Nightly Details")
-    .navigationBarTitleDisplayMode(.inline)
   }
 
-  private func answer(at i: Int) -> String {
-    guard i < entry.answers.count else { return "—" }
-    let t = entry.answers[i].trimmingCharacters(in: .whitespacesAndNewlines)
+  private func answerText(entry: NightlyEntry, index: Int) -> String {
+    guard index < entry.answers.count else { return "—" }
+    let t = entry.answers[index].trimmingCharacters(in: .whitespacesAndNewlines)
     return t.isEmpty ? "—" : t
+  }
+
+  private func shareText(for entry: NightlyEntry) -> String {
+    var lines: [String] = []
+    lines.append("Nightly Inventory — \(DF.long.string(from: entry.date))")
+    lines.append("")
+    for (q, a) in zip(entry.questions, entry.answers) {
+      let ans = a.trimmingCharacters(in: .whitespacesAndNewlines)
+      lines.append("• \(q)")
+      lines.append(ans.isEmpty ? "  —" : "  \(ans)")
+      lines.append("")
+    }
+    return lines.joined(separator: "\n")
+  }
+}
+
+// MARK: - Edit Past Nightly
+
+struct EditNightlyView: View {
+  @EnvironmentObject private var store: NightlyStore
+  let entryID: UUID
+
+  @Environment(\.dismiss) private var dismiss
+
+  @State private var questions: [String] = []
+  @State private var answers: [String] = []
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(spacing: 20) {
+          ForEach(questions.indices, id: \.self) { i in
+            QuestionCard(
+              question: questions[i],
+              answer: bindingForAnswer(i)
+            )
+          }
+          Button {
+            saveChanges()
+          } label: {
+            HStack(spacing: 8) {
+              Image(systemName: "tray.and.arrow.down")
+              Text("Save Changes").fontWeight(.semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.tint.opacity(0.15))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+          }
+          .padding(.top)
+        }
+        .padding()
+      }
+      .navigationTitle("Edit Nightly")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Button("Cancel") { dismiss() }
+        }
+      }
+      .onAppear(perform: loadEntryIfNeeded)
+    }
+  }
+
+  private func loadEntryIfNeeded() {
+    guard questions.isEmpty else { return }
+    guard let entry = store.entries.first(where: { $0.id == entryID }) else { return }
+    questions = entry.questions
+    // Ensure answers count matches questions
+    let trimmed = entry.answers.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    if trimmed.count < questions.count {
+      answers = trimmed + Array(repeating: "", count: questions.count - trimmed.count)
+    } else {
+      answers = Array(trimmed.prefix(questions.count))
+    }
+  }
+
+  private func bindingForAnswer(_ i: Int) -> Binding<String> {
+    Binding(
+      get: { i < answers.count ? answers[i] : "" },
+      set: { newValue in
+        if i >= answers.count {
+          answers.append(contentsOf: Array(repeating: "", count: i - answers.count + 1))
+        }
+        answers[i] = newValue
+      }
+    )
+  }
+
+  private func saveChanges() {
+    // Persist exactly one answer per question
+    let cleaned = (0..<questions.count).map { i in
+      (i < answers.count ? answers[i] : "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    store.updateAnswers(for: entryID, answers: cleaned)
+    dismiss()
   }
 }
 
