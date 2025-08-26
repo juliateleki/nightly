@@ -1,6 +1,6 @@
 # Nightly Inventory
 
-An app to help users complete their nightly inventory
+An app to help users complete their nightly inventory, a tool of self improvement and introspection. Identify character defects and make corrective measures to improve them.
 
 Addresses the following 4 character defects: resentment, selfishness, dishonesty, and fear.
 
