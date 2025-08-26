@@ -64,7 +64,6 @@ final class NightlyStore: ObservableObject {
     save()
   }
 
-  /// Update only the answers of an existing entry (keeps date/questions snapshot)
   func updateAnswers(for entryID: UUID, answers: [String]) {
     guard let idx = entries.firstIndex(where: { $0.id == entryID }) else { return }
     let old = entries[idx]
@@ -108,7 +107,7 @@ enum MenuItem: String, CaseIterable, Identifiable {
   }
 }
 
-// MARK: - Root Shell with Hamburger
+// MARK: - Root Shell (menu overlays nav/title)
 
 struct ContentView: View {
   @StateObject private var store = NightlyStore()
@@ -116,26 +115,20 @@ struct ContentView: View {
   @State private var isMenuOpen: Bool = false
 
   var body: some View {
-    NavigationStack {
-      ZStack(alignment: .leading) {
-        // Main content
+    ZStack { // <- Side menu sits above NavigationStack
+      NavigationStack {
         Group {
           switch selection {
             case .new:
-              NewNightlyView()
-                .environmentObject(store)
-                .navigationTitle("Nightly Inventory")
+              NewNightlyView().environmentObject(store).navigationTitle("Nightly Inventory")
             case .history:
-              HistoryView()
-                .environmentObject(store)
-                .navigationTitle("History")
+              HistoryView().environmentObject(store).navigationTitle("History")
             case .sobriety:
-              SobrietyCounterView()
-                .navigationTitle("Sobriety Counter")
+              SobrietyCounterView().navigationTitle("Sobriety Counter")
           }
         }
         .toolbar {
-          ToolbarItem(placement: .topBarLeading) {
+          ToolbarItem(placement: .topBarTrailing) { // <- top-right hamburger
             Button {
               withAnimation(.easeInOut(duration: 0.2)) { isMenuOpen.toggle() }
             } label: {
@@ -144,39 +137,41 @@ struct ContentView: View {
             .accessibilityLabel("Menu")
           }
         }
-
-        // Dim overlay when menu open
-        if isMenuOpen {
-          Color.black.opacity(0.25)
-            .ignoresSafeArea()
-            .onTapGesture {
-              withAnimation(.easeInOut(duration: 0.2)) { isMenuOpen = false }
-            }
-        }
-
-        // Side menu panel
-        SideMenu(isOpen: $isMenuOpen, selection: $selection)
       }
+
+      // Dimmer overlay
+      if isMenuOpen {
+        Color.black.opacity(0.25)
+          .ignoresSafeArea()
+          .zIndex(1)
+          .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) { isMenuOpen = false }
+          }
+      }
+
+      // Solid side menu from the RIGHT, above everything (including nav/title)
+      SideMenuRight(isOpen: $isMenuOpen, selection: $selection)
+        .zIndex(2)
     }
   }
 }
 
-struct SideMenu: View {
+struct SideMenuRight: View {
   @Binding var isOpen: Bool
   @Binding var selection: MenuItem
 
-  private let width: CGFloat = 280
+  private let width: CGFloat = 300
 
   var body: some View {
-    ZStack(alignment: .leading) {
-      // Panel
-      VStack(alignment: .leading, spacing: 8) {
+    VStack {
+      // content panel
+      VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 10) {
           Image(systemName: "moon.stars.fill")
           Text("nightly")
             .font(.title3.weight(.semibold))
         }
-        .padding(.bottom, 16)
+        .padding(.bottom, 12)
 
         ForEach(MenuItem.allCases) { item in
           Button {
@@ -207,18 +202,20 @@ struct SideMenu: View {
       }
       .padding(.top, 20)
       .padding(.horizontal, 16)
-      .frame(width: width)
-      .frame(maxHeight: .infinity, alignment: .top)
-      .background(.ultraThinMaterial)
-      .shadow(radius: 8)
-      .offset(x: isOpen ? 0 : -width)
-      .ignoresSafeArea(edges: .vertical)
+      .frame(width: width, alignment: .topLeading)   // <- fixed
+      .frame(maxHeight: .infinity)                   // <- fixed
+      .background(Color(.systemBackground))          // solid
+      .shadow(radius: 10)
+      .offset(x: isOpen ? 0 : width)                 // slide in from right
+      .animation(.easeInOut(duration: 0.2), value: isOpen)
     }
-    .animation(.easeInOut(duration: 0.2), value: isOpen)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+    .ignoresSafeArea() // overlays under the nav/title
   }
 }
 
-// MARK: - New Nightly (no inner NavigationStack)
+
+// MARK: - New Nightly
 
 struct NewNightlyView: View {
   @EnvironmentObject private var store: NightlyStore
@@ -227,7 +224,7 @@ struct NewNightlyView: View {
     "Were we resentful?",
     "Were we selfish?",
     "Were we dishonest?",
-    "Were we delusional",
+    "Were we delusional?",
     "Were we afraid?",
     "Do we owe an apology?",
     "Have we kept something to ourselves which should be discussed with another person at once?",
@@ -307,7 +304,7 @@ struct NewNightlyView: View {
   }
 }
 
-// Dismiss keyboard helper
+// Dismiss keyboard
 private func endEditing() {
 #if canImport(UIKit)
   UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -334,12 +331,8 @@ struct QuestionCard: View {
         TextEditor(text: $answer)
           .padding(8)
           .frame(minHeight: 110)
-          .background(
-            RoundedRectangle(cornerRadius: 12).fill(Color(.systemBackground))
-          )
-          .overlay(
-            RoundedRectangle(cornerRadius: 12).stroke(.quaternary, lineWidth: 1)
-          )
+          .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemBackground)))
+          .overlay(RoundedRectangle(cornerRadius: 12).stroke(.quaternary, lineWidth: 1))
           .scrollContentBackground(.hidden)
           .textInputAutocapitalization(.sentences)
           .disableAutocorrection(false)
@@ -404,12 +397,8 @@ struct HistoryRow: View {
   let entry: NightlyEntry
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text(DF.full.string(from: entry.date))
-        .font(.headline)
-      Text(previewText(for: entry))
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-        .lineLimit(2)
+      Text(DF.full.string(from: entry.date)).font(.headline)
+      Text(previewText(for: entry)).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
     }
     .padding(.vertical, 4)
   }
@@ -419,7 +408,7 @@ struct HistoryRow: View {
   }
 }
 
-// MARK: - Detail (keeps Share + Edit)
+// MARK: - Detail (Share + Edit)
 
 struct NightlyDetailView: View {
   @EnvironmentObject private var store: NightlyStore
@@ -435,8 +424,7 @@ struct NightlyDetailView: View {
       if let entry {
         ScrollView {
           VStack(alignment: .leading, spacing: 16) {
-            Text(DF.long.string(from: entry.date))
-              .font(.title2.weight(.semibold))
+            Text(DF.long.string(from: entry.date)).font(.title2.weight(.semibold))
 
             ForEach(entry.questions.indices, id: \.self) { i in
               VStack(alignment: .leading, spacing: 8) {
@@ -444,10 +432,7 @@ struct NightlyDetailView: View {
                 Text(answerText(entry: entry, index: i))
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .padding(12)
-                  .background(
-                    RoundedRectangle(cornerRadius: 12)
-                      .fill(Color(.secondarySystemBackground))
-                  )
+                  .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
               }
             }
           }
@@ -457,20 +442,12 @@ struct NightlyDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
           ToolbarItemGroup(placement: .topBarTrailing) {
-            ShareLink(item: shareText(for: entry)) {
-              Image(systemName: "square.and.arrow.up")
-            }
-            Button {
-              showingEditor = true
-            } label: {
-              Image(systemName: "pencil")
-            }
-            .accessibilityLabel("Edit")
+            ShareLink(item: shareText(for: entry)) { Image(systemName: "square.and.arrow.up") }
+            Button { showingEditor = true } label: { Image(systemName: "pencil") }.accessibilityLabel("Edit")
           }
         }
         .sheet(isPresented: $showingEditor) {
-          EditNightlyView(entryID: entry.id)
-            .environmentObject(store)
+          EditNightlyView(entryID: entry.id).environmentObject(store)
         }
       } else {
         if #available(iOS 17, *) {
@@ -538,11 +515,7 @@ struct EditNightlyView: View {
       }
       .navigationTitle("Edit Nightly")
       .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          Button("Cancel") { dismiss() }
-        }
-      }
+      .toolbar { ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } } }
       .onAppear(perform: loadEntryIfNeeded)
     }
   }
@@ -581,7 +554,6 @@ struct EditNightlyView: View {
 // MARK: - Sobriety Counter
 
 struct SobrietyCounterView: View {
-  // Store as a unix timestamp (seconds) so @AppStorage works cleanly
   @AppStorage("sobrietyStart_ts") private var sobrietyStartTS: Double = 0
   @State private var showingPicker = false
   @State private var tempDate: Date = Date()
@@ -592,7 +564,9 @@ struct SobrietyCounterView: View {
 
   private var daysSober: Int? {
     guard let start = sobrietyStart else { return nil }
-    return Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: start), to: Calendar.current.startOfDay(for: Date())).day
+    return Calendar.current.dateComponents([.day],
+      from: Calendar.current.startOfDay(for: start),
+      to: Calendar.current.startOfDay(for: Date())).day
   }
 
   var body: some View {
@@ -601,8 +575,7 @@ struct SobrietyCounterView: View {
         Text("\(days) days sober")
           .font(.system(size: 40, weight: .bold, design: .rounded))
         if let start = sobrietyStart {
-          Text("Since \(DF.long.string(from: start))")
-            .foregroundStyle(.secondary)
+          Text("Since \(DF.long.string(from: start))").foregroundStyle(.secondary)
         }
       } else {
         Text("No sobriety date set")
@@ -612,11 +585,7 @@ struct SobrietyCounterView: View {
 
       HStack(spacing: 12) {
         Button {
-          if let start = sobrietyStart {
-            tempDate = start
-          } else {
-            tempDate = Date()
-          }
+          tempDate = sobrietyStart ?? Date()
           showingPicker = true
         } label: {
           Label(sobrietyStart == nil ? "Set Sobriety Date" : "Change Date", systemImage: "calendar")
@@ -627,9 +596,7 @@ struct SobrietyCounterView: View {
         }
 
         if sobrietyStart != nil {
-          Button(role: .destructive) {
-            sobrietyStartTS = 0
-          } label: {
+          Button(role: .destructive) { sobrietyStartTS = 0 } label: {
             Label("Clear", systemImage: "xmark.circle")
               .frame(maxWidth: .infinity)
               .padding(.vertical, 12)
@@ -653,15 +620,8 @@ struct SobrietyCounterView: View {
         .padding()
         .navigationTitle("Set Date")
         .toolbar {
-          ToolbarItem(placement: .topBarLeading) {
-            Button("Cancel") { showingPicker = false }
-          }
-          ToolbarItem(placement: .topBarTrailing) {
-            Button("Save") {
-              sobrietyStartTS = tempDate.timeIntervalSince1970
-              showingPicker = false
-            }.bold()
-          }
+          ToolbarItem(placement: .topBarLeading) { Button("Cancel") { showingPicker = false } }
+          ToolbarItem(placement: .topBarTrailing) { Button("Save") { sobrietyStartTS = tempDate.timeIntervalSince1970; showingPicker = false }.bold() }
         }
       }
     }
