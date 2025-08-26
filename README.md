@@ -8,7 +8,8 @@ Addresses the following 4 character defects: resentment, selfishness, dishonesty
 
 - Were we resentful?
 - Were we selfish?
-- Were we dishonest
+- Were we dishonest?
+- Were we delusional?
 - Were we afraid?
 - Do we owe an apology?
 - Have we kept something to ourselves which should be discussed with another person at once?

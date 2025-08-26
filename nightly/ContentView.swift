@@ -128,6 +128,7 @@ struct NewNightlyView: View {
     "Were we resentful?",
     "Were we selfish?",
     "Were we dishonest?",
+    "Were we deleusional?",
     "Were we afraid?",
     "Do we owe an apology?",
     "Have we kept something to ourselves which should be discussed with another person at once?",
