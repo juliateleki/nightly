@@ -99,6 +99,7 @@ enum MenuItem: String, CaseIterable, Identifiable {
   case history = "Past Nightlies"
   case sobriety = "Sobriety Counter"
   case onAwakening = "On Awakening"
+  case serenity = "Serenity Prayer"
 
   var id: String { rawValue }
   var systemImage: String {
@@ -107,6 +108,7 @@ enum MenuItem: String, CaseIterable, Identifiable {
       case .history: return "clock.arrow.circlepath"
       case .sobriety: return "heart.text.square"
       case .onAwakening: return "sun.max"
+      case .serenity: return "hands.sparkles"
     }
   }
 }
@@ -135,6 +137,9 @@ struct ContentView: View {
             case .onAwakening:
               OnAwakeningView()
                 .navigationTitle("On Awakening")
+            case .serenity:
+              SerenityPrayerView()
+                .navigationTitle("Serenity Prayer")
           }
         }
         .toolbar {
@@ -228,15 +233,15 @@ struct SideMenuRight: View {
       }
       .padding(.top, safeTopInset + 8)        // keep below the speaker/notch
       .padding(.horizontal, 16)
-      .frame(width: width, alignment: .topLeading)
-      .frame(maxHeight: .infinity)
-      .background(Color(.systemBackground))   // solid (not transparent)
+      .frame(width: width, alignment: .topLeading) // fixed width
+      .frame(maxHeight: .infinity)                 // full height
+      .background(Color(.systemBackground))        // solid (not transparent)
       .shadow(radius: 10)
-      .offset(x: isOpen ? 0 : width)          // slide in from right
+      .offset(x: isOpen ? 0 : width)               // slide in from right
       .animation(.easeInOut(duration: 0.2), value: isOpen)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-    .ignoresSafeArea(edges: .bottom)          // overlay under nav/title, but honor top
+    .ignoresSafeArea(edges: .bottom)               // overlay under nav/title, but honor top
   }
 }
 
@@ -245,6 +250,7 @@ struct SideMenuRight: View {
 struct NewNightlyView: View {
   @EnvironmentObject private var store: NightlyStore
 
+  // ✅ Added "Were we delusional?" just after "Were we dishonest?"
   private let questions: [String] = [
     "Were we resentful?",
     "Were we selfish?",
@@ -265,7 +271,7 @@ struct NewNightlyView: View {
   @State private var showingSaved = false
 
   init() {
-    _answers = State(initialValue: Array(repeating: "", count: 12))
+    _answers = State(initialValue: Array(repeating: "", count: questions.count))
   }
 
   var body: some View {
@@ -325,8 +331,8 @@ struct NewNightlyView: View {
     guard trimmed.contains(where: { !$0.isEmpty }) else { return }
     store.add(questions: questions, answers: trimmed)
     answers = Array(repeating: "", count: questions.count)
-    showingSaved = true
     endEditing()
+    showingSaved = true
   }
 }
 
@@ -711,6 +717,42 @@ As we go through the day we pause, when agitated or doubtful, and ask for the ri
 It works - it really does.
 
 We alcoholics are undisciplined. So we let God discipline us in the simple way we have just outlined. But this is not all. There is action and more action. “Faith without works is dead.” (from "Alcoholics Anonymous pg. 86-88)
+"""
+}
+
+// MARK: - Serenity Prayer
+
+struct SerenityPrayerView: View {
+  private let prayer = SerenityPrayer.text
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        Text("Serenity Prayer")
+          .font(.title2.weight(.semibold))
+        Text(prayer)
+          .font(.body)
+          .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding()
+    }
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        ShareLink(item: prayer) {
+          Image(systemName: "square.and.arrow.up")
+        }
+        .accessibilityLabel("Share")
+      }
+    }
+  }
+}
+
+enum SerenityPrayer {
+  static let text = """
+God, grant me the serenity to accept the things I cannot change,
+the courage to change the things I can,
+and the wisdom to know the difference.
 """
 }
 
