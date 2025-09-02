@@ -64,6 +64,7 @@ final class NightlyStore: ObservableObject {
     save()
   }
 
+  /// Update only answers of an existing entry (keeps original date & question snapshot)
   func updateAnswers(for entryID: UUID, answers: [String]) {
     guard let idx = entries.firstIndex(where: { $0.id == entryID }) else { return }
     let old = entries[idx]
@@ -97,6 +98,7 @@ enum MenuItem: String, CaseIterable, Identifiable {
   case new = "New Nightly"
   case history = "Past Nightlies"
   case sobriety = "Sobriety Counter"
+
   var id: String { rawValue }
   var systemImage: String {
     switch self {
@@ -115,20 +117,23 @@ struct ContentView: View {
   @State private var isMenuOpen: Bool = false
 
   var body: some View {
-    ZStack { // <- Side menu sits above NavigationStack
+    ZStack { // Menu + dimmer sit ABOVE NavigationStack
       NavigationStack {
         Group {
           switch selection {
             case .new:
-              NewNightlyView().environmentObject(store).navigationTitle("Nightly Inventory")
+              NewNightlyView()
+                .navigationTitle("Nightly Inventory")
             case .history:
-              HistoryView().environmentObject(store).navigationTitle("History")
+              HistoryView()
+                .navigationTitle("History")
             case .sobriety:
-              SobrietyCounterView().navigationTitle("Sobriety Counter")
+              SobrietyCounterView()
+                .navigationTitle("Sobriety Counter")
           }
         }
         .toolbar {
-          ToolbarItem(placement: .topBarTrailing) { // <- top-right hamburger
+          ToolbarItem(placement: .topBarTrailing) { // top-right hamburger
             Button {
               withAnimation(.easeInOut(duration: 0.2)) { isMenuOpen.toggle() }
             } label: {
@@ -139,7 +144,7 @@ struct ContentView: View {
         }
       }
 
-      // Dimmer overlay
+      // Dim overlay
       if isMenuOpen {
         Color.black.opacity(0.25)
           .ignoresSafeArea()
@@ -149,10 +154,11 @@ struct ContentView: View {
           }
       }
 
-      // Solid side menu from the RIGHT, above everything (including nav/title)
+      // Solid side menu (slides from right, covers nav/title)
       SideMenuRight(isOpen: $isMenuOpen, selection: $selection)
         .zIndex(2)
     }
+    .environmentObject(store) // inject store ONCE for all children, pushes, and sheets
   }
 }
 
@@ -164,7 +170,6 @@ struct SideMenuRight: View {
 
   var body: some View {
     VStack {
-      // content panel
       VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 10) {
           Image(systemName: "moon.stars.fill")
@@ -202,9 +207,9 @@ struct SideMenuRight: View {
       }
       .padding(.top, 20)
       .padding(.horizontal, 16)
-      .frame(width: width, alignment: .topLeading)   // <- fixed
-      .frame(maxHeight: .infinity)                   // <- fixed
-      .background(Color(.systemBackground))          // solid
+      .frame(width: width, alignment: .topLeading)   // fixed width
+      .frame(maxHeight: .infinity)                   // full height
+      .background(Color(.systemBackground))          // solid (not transparent)
       .shadow(radius: 10)
       .offset(x: isOpen ? 0 : width)                 // slide in from right
       .animation(.easeInOut(duration: 0.2), value: isOpen)
@@ -213,7 +218,6 @@ struct SideMenuRight: View {
     .ignoresSafeArea() // overlays under the nav/title
   }
 }
-
 
 // MARK: - New Nightly
 
@@ -224,7 +228,6 @@ struct NewNightlyView: View {
     "Were we resentful?",
     "Were we selfish?",
     "Were we dishonest?",
-    "Were we delusional?",
     "Were we afraid?",
     "Do we owe an apology?",
     "Have we kept something to ourselves which should be discussed with another person at once?",
@@ -272,6 +275,7 @@ struct NewNightlyView: View {
     .onAppear { ensureAnswerCapacity() }
   }
 
+  // Defensive binding to prevent index-out-of-range if you add questions
   private func bindingForAnswer(_ i: Int) -> Binding<String> {
     Binding(
       get: { i < answers.count ? answers[i] : "" },
@@ -304,7 +308,7 @@ struct NewNightlyView: View {
   }
 }
 
-// Dismiss keyboard
+// Dismiss keyboard helper
 private func endEditing() {
 #if canImport(UIKit)
   UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -320,7 +324,6 @@ struct QuestionCard: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text(question).font(.headline)
-
       ZStack(alignment: .topLeading) {
         if answer.isEmpty {
           Text("Type your answer…")
@@ -447,7 +450,7 @@ struct NightlyDetailView: View {
           }
         }
         .sheet(isPresented: $showingEditor) {
-          EditNightlyView(entryID: entry.id).environmentObject(store)
+          EditNightlyView(entryID: entry.id) // inherits environmentObject from root
         }
       } else {
         if #available(iOS 17, *) {
@@ -515,7 +518,11 @@ struct EditNightlyView: View {
       }
       .navigationTitle("Edit Nightly")
       .navigationBarTitleDisplayMode(.inline)
-      .toolbar { ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } } }
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Button("Cancel") { dismiss() }
+        }
+      }
       .onAppear(perform: loadEntryIfNeeded)
     }
   }
@@ -554,6 +561,7 @@ struct EditNightlyView: View {
 // MARK: - Sobriety Counter
 
 struct SobrietyCounterView: View {
+  // Store as epoch seconds so @AppStorage is robust across locales/timezones
   @AppStorage("sobrietyStart_ts") private var sobrietyStartTS: Double = 0
   @State private var showingPicker = false
   @State private var tempDate: Date = Date()
@@ -564,9 +572,10 @@ struct SobrietyCounterView: View {
 
   private var daysSober: Int? {
     guard let start = sobrietyStart else { return nil }
-    return Calendar.current.dateComponents([.day],
-      from: Calendar.current.startOfDay(for: start),
-      to: Calendar.current.startOfDay(for: Date())).day
+    let cal = Calendar.current
+    let startDay = cal.startOfDay(for: start)
+    let today = cal.startOfDay(for: Date())
+    return cal.dateComponents([.day], from: startDay, to: today).day
   }
 
   var body: some View {
@@ -596,7 +605,9 @@ struct SobrietyCounterView: View {
         }
 
         if sobrietyStart != nil {
-          Button(role: .destructive) { sobrietyStartTS = 0 } label: {
+          Button(role: .destructive) {
+            sobrietyStartTS = 0
+          } label: {
             Label("Clear", systemImage: "xmark.circle")
               .frame(maxWidth: .infinity)
               .padding(.vertical, 12)
@@ -621,7 +632,12 @@ struct SobrietyCounterView: View {
         .navigationTitle("Set Date")
         .toolbar {
           ToolbarItem(placement: .topBarLeading) { Button("Cancel") { showingPicker = false } }
-          ToolbarItem(placement: .topBarTrailing) { Button("Save") { sobrietyStartTS = tempDate.timeIntervalSince1970; showingPicker = false }.bold() }
+          ToolbarItem(placement: .topBarTrailing) {
+            Button("Save") {
+              sobrietyStartTS = tempDate.timeIntervalSince1970
+              showingPicker = false
+            }.bold()
+          }
         }
       }
     }
