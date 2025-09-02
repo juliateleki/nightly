@@ -168,6 +168,20 @@ struct SideMenuRight: View {
 
   private let width: CGFloat = 300
 
+  // Top safe-area inset (works on all iPhones with notch/Dynamic Island)
+  private var safeTopInset: CGFloat {
+    #if canImport(UIKit)
+    return UIApplication.shared
+      .connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap { $0.windows }
+      .first(where: { $0.isKeyWindow })?
+      .safeAreaInsets.top ?? 0
+    #else
+    return 0
+    #endif
+  }
+
   var body: some View {
     VStack {
       VStack(alignment: .leading, spacing: 10) {
@@ -190,8 +204,7 @@ struct SideMenuRight: View {
               Text(item.rawValue)
               Spacer()
               if item == selection {
-                Image(systemName: "checkmark")
-                  .foregroundStyle(.secondary)
+                Image(systemName: "checkmark").foregroundStyle(.secondary)
               }
             }
             .padding(12)
@@ -205,19 +218,20 @@ struct SideMenuRight: View {
 
         Spacer()
       }
-      .padding(.top, 20)
+      .padding(.top, safeTopInset + 8)          // <- push below the speaker/notch
       .padding(.horizontal, 16)
-      .frame(width: width, alignment: .topLeading)   // fixed width
-      .frame(maxHeight: .infinity)                   // full height
-      .background(Color(.systemBackground))          // solid (not transparent)
+      .frame(width: width, alignment: .topLeading)
+      .frame(maxHeight: .infinity)
+      .background(Color(.systemBackground))     // solid
       .shadow(radius: 10)
-      .offset(x: isOpen ? 0 : width)                 // slide in from right
+      .offset(x: isOpen ? 0 : width)            // slide in from right
       .animation(.easeInOut(duration: 0.2), value: isOpen)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-    .ignoresSafeArea() // overlays under the nav/title
+    .ignoresSafeArea(edges: .bottom)            // <- don't ignore top; only bottom
   }
 }
+
 
 // MARK: - New Nightly
 
