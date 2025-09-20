@@ -22,6 +22,17 @@ struct HistoryRow: View {
   }
 
   private func previewText(for entry: NightlyEntry) -> String {
-    entry.answers.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? "No answers recorded."
+    entry.answers.first {
+      !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    } ?? "No answers recorded."
   }
 }
+
+//#Preview {
+//  let entry = NightlyEntry(
+//    date: Date(),
+//    answers: ["Hello", "World"],
+//    questions: <#[String]#>
+//  )
+//  HistoryRow(entry: entry)
+//}
