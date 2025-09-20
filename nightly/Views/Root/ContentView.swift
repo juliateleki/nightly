@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
   @StateObject private var store = NightlyStore()
-  @State private var selection: MenuItem = .new
+  @State private var selection: MenuItem = .home   // 👈 default to Home
   @State private var isMenuOpen: Bool = false
 
   var body: some View {
@@ -10,6 +10,8 @@ struct ContentView: View {
       NavigationStack {
         Group {
           switch selection {
+            case .home:
+              HomeView().navigationTitle("Home")    // 👈 NEW
             case .new:
               NewNightlyView().navigationTitle("Nightly Inventory")
             case .history:
@@ -48,6 +50,5 @@ struct ContentView: View {
   }
 }
 
-#Preview {
-  ContentView()
-}
+#Preview { ContentView() }
+
