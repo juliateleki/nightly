@@ -11,7 +11,7 @@ struct ContentView: View {
         Group {
           switch selection {
             case .home:
-              HomeView().navigationTitle("Home")    // 👈 NEW
+              HomeView().navigationTitle("")    // 👈 NEW
             case .new:
               NewNightlyView().navigationTitle("Nightly Inventory")
             case .history:
