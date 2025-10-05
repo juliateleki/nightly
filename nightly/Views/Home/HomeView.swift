@@ -1,30 +1,36 @@
+//
+//  NightlyDetailView.swift
+//  nightly
+//
+//  Created by Julia Teleki on 9/17/25.
+//
+
 import SwiftUI
 
 struct HomeView: View {
   private let quote = DailyQuotes.quote()
-  private let verticalBias: CGFloat = 80   // ⬅️ raise quote by ~80pt (tweak to taste)
+  private let verticalBias: CGFloat = 80   // moves quote slightly upward
 
   var body: some View {
     GeometryReader { proxy in
       ScrollView {
         VStack(spacing: 24) {
-          // Centered "Welcome" at the top
+          // "Welcome" at the top
           Text("Welcome")
             .font(.largeTitle.bold())
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, alignment: .center)
 
-          // Spacer pushes toward vertical center
           Spacer(minLength: 0)
 
-          // Centered quote card
+          // Centered quote — no background box
           VStack(alignment: .center, spacing: 12) {
             Image(systemName: "quote.bubble")
               .imageScale(.large)
               .opacity(0.6)
 
             Text("“\(quote.text)”")
-              .font(.title)                       // larger quote text
+              .font(.title)
               .multilineTextAlignment(.center)
               .fixedSize(horizontal: false, vertical: true)
 
@@ -35,20 +41,14 @@ struct HomeView: View {
                 .multilineTextAlignment(.center)
             }
           }
-          .padding(16)
-          .background(
-            RoundedRectangle(cornerRadius: 16)
-              .fill(Color(.secondarySystemBackground))
-          )
           .frame(maxWidth: 560)
           .frame(maxWidth: .infinity, alignment: .center)
 
-          // Bottom spacer + a little fixed space to bias the quote upward
           Spacer(minLength: 0)
-          Color.clear.frame(height: verticalBias)   // ⬅️ adds extra space *below* the quote
+          Color.clear.frame(height: verticalBias)
         }
         .padding()
-        .frame(minHeight: proxy.size.height)        // lets Spacers take effect
+        .frame(minHeight: proxy.size.height)
       }
     }
     .toolbar {
@@ -68,5 +68,5 @@ struct HomeView: View {
 }
 
 #Preview {
-  NavigationStack { HomeView() } // no nav title
+  NavigationStack { HomeView() }
 }

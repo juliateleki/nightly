@@ -5,11 +5,6 @@
 //  Created by Julia Teleki on 9/17/25.
 //
 
-//
-//  NightlyDetailView.swift
-//  nightly
-//
-
 import SwiftUI
 
 struct NightlyDetailView: View {
