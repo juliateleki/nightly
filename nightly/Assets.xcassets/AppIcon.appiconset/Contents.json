@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "nightly_moon_app_icon_1024_v5_bluehalo.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -12,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "nightly_moon_app_icon_1024_v4 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -23,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "nightly_moon_app_icon_1024_v4 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
