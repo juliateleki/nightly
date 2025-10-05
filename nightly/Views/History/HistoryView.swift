@@ -28,20 +28,27 @@ struct HistoryView: View {
               .foregroundStyle(.secondary)
               .multilineTextAlignment(.center)
               .padding(.horizontal)
-          }.padding()
+          }
+          .padding()
         }
       } else {
-        List {
-          ForEach(filteredEntries) { entry in
-            NavigationLink {
-              NightlyDetailView(entryID: entry.id)
-            } label: {
-              HistoryRow(entry: entry)
+        VStack(spacing: 8) {
+          // Chronological for trend (oldest -> newest)
+          MoodSparkline(moods: store.entries.reversed().map { $0.mood })
+            .padding(.horizontal)
+
+          List {
+            ForEach(filteredEntries) { entry in
+              NavigationLink {
+                NightlyDetailView(entryID: entry.id)
+              } label: {
+                HistoryRow(entry: entry)
+              }
             }
+            .onDelete(perform: store.delete)
           }
-          .onDelete(perform: store.delete)
+          .listStyle(.insetGrouped)
         }
-        .listStyle(.insetGrouped)
       }
     }
     .searchable(text: $query, placement: .navigationBarDrawer, prompt: "Search answers")

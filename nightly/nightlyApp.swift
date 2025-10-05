@@ -7,11 +7,16 @@
 
 import SwiftUI
 
+
 @main
-struct nightlyApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+struct NightlyApp: App {
+@StateObject private var store = NightlyStore()
+
+
+var body: some Scene {
+  WindowGroup {
+    ContentView()
+    .environmentObject(store)
     }
+  }
 }

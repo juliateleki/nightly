@@ -5,6 +5,11 @@
 //  Created by Julia Teleki on 9/17/25.
 //
 
+//
+//  NightlyDetailView.swift
+//  nightly
+//
+
 import SwiftUI
 
 struct NightlyDetailView: View {
@@ -21,7 +26,21 @@ struct NightlyDetailView: View {
       if let entry {
         ScrollView {
           VStack(alignment: .leading, spacing: 16) {
-            Text(DF.long.string(from: entry.date)).font(.title2.weight(.semibold))
+
+            // Header with mood + date
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+              Text(entry.mood.emoji)
+                .font(.largeTitle)
+                .accessibilityLabel(entry.mood.label)
+              VStack(alignment: .leading, spacing: 2) {
+                Text(DF.long.string(from: entry.date))
+                  .font(.title2.weight(.semibold))
+                Text(entry.mood.label)
+                  .font(.subheadline)
+                  .foregroundStyle(.secondary)
+              }
+              Spacer()
+            }
 
             ForEach(entry.questions.indices, id: \.self) { i in
               VStack(alignment: .leading, spacing: 8) {
@@ -45,7 +64,9 @@ struct NightlyDetailView: View {
           }
         }
         .sheet(isPresented: $showingEditor) {
+          // Uses your existing editor by ID
           EditNightlyView(entryID: entry.id)
+            .environmentObject(store)
         }
       } else {
         if #available(iOS 17, *) {
@@ -66,6 +87,7 @@ struct NightlyDetailView: View {
   private func shareText(for entry: NightlyEntry) -> String {
     var lines: [String] = []
     lines.append("Nightly Inventory — \(DF.long.string(from: entry.date))")
+    lines.append("Mood: \(entry.mood.emoji) \(entry.mood.label)")
     lines.append("")
     for (q, a) in zip(entry.questions, entry.answers) {
       let ans = a.trimmingCharacters(in: .whitespacesAndNewlines)

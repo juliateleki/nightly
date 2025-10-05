@@ -5,11 +5,20 @@
 //  Created by Julia Teleki on 9/17/25.
 //
 
+//
+//  NewNightlyView.swift
+//  nightly
+//
+//  Created by Julia Teleki on 9/17/25.
+//  Updated: adds Mood picker while preserving your structure & behavior
+//
+
 import SwiftUI
 
 struct NewNightlyView: View {
   @EnvironmentObject private var store: NightlyStore
 
+  // Full Nightly questions (unchanged)
   private let questions: [String] = [
     "Were we resentful?",
     "Were we selfish?",
@@ -27,6 +36,7 @@ struct NewNightlyView: View {
   ]
 
   @State private var answers: [String]
+  @State private var mood: Mood = .neutral   // NEW
   @State private var showingSaved = false
 
   init() {
@@ -36,6 +46,11 @@ struct NewNightlyView: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 20) {
+
+        // NEW: Mood selection at the top
+        MoodPicker(mood: $mood)
+
+        // Your existing QuestionCard UI
         ForEach(questions.indices, id: \.self) { i in
           QuestionCard(question: questions[i], answer: bindingForAnswer(i))
         }
@@ -62,6 +77,7 @@ struct NewNightlyView: View {
     .onAppear { ensureAnswerCapacity() }
   }
 
+  // MARK: - Helpers (unchanged)
   private func bindingForAnswer(_ i: Int) -> Binding<String> {
     Binding(
       get: { i < answers.count ? answers[i] : "" },
@@ -86,10 +102,24 @@ struct NewNightlyView: View {
     let trimmed: [String] = (0..<questions.count).map { i in
       (i < answers.count ? answers[i] : "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
+    // Do not save if all answers are empty
     guard trimmed.contains(where: { !$0.isEmpty }) else { return }
-    store.add(questions: questions, answers: trimmed)
+
+    // NEW: Save with mood (see NightlyStore extension below)
+    store.add(questions: questions, answers: trimmed, mood: mood)
+
+    // Reset state
     answers = Array(repeating: "", count: questions.count)
     endEditing()
     showingSaved = true
+  }
+}
+
+private extension NewNightlyView {
+  func endEditing() {
+    #if canImport(UIKit)
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                    to: nil, from: nil, for: nil)
+    #endif
   }
 }
