@@ -8,8 +8,57 @@
 import SwiftUI
 
 struct HomeView: View {
+  @EnvironmentObject private var store: NightlyStore
   @Environment(\.colorScheme) private var colorScheme
+
   private let quote = DailyQuotes.quote()
+
+  // MARK: - Date helpers
+
+  private static let timeFormatter: DateFormatter = {
+    let df = DateFormatter()
+    df.dateStyle = .none
+    df.timeStyle = .short
+    return df
+  }()
+
+  private var todayEntry: NightlyEntry? {
+    latestEntry { Calendar.current.isDateInToday($0.date) }
+  }
+
+  private var yesterdayEntry: NightlyEntry? {
+    latestEntry { Calendar.current.isDateInYesterday($0.date) }
+  }
+
+  private var thisWeekEntry: NightlyEntry? {
+    let cal = Calendar.current
+    let now = Date()
+    let currentWeek = cal.component(.weekOfYear, from: now)
+    let currentYear = cal.component(.yearForWeekOfYear, from: now)
+
+    return latestEntry { entry in
+      let d = entry.date
+      let week = cal.component(.weekOfYear, from: d)
+      let year = cal.component(.yearForWeekOfYear, from: d)
+      return week == currentWeek
+        && year == currentYear
+        && !cal.isDateInToday(d)
+        && !cal.isDateInYesterday(d)
+    }
+  }
+
+  private func latestEntry(where predicate: (NightlyEntry) -> Bool) -> NightlyEntry? {
+    store.entries
+      .filter(predicate)
+      .sorted { $0.date > $1.date }
+      .first
+  }
+
+  private func timeString(for date: Date) -> String {
+    Self.timeFormatter.string(from: date)
+  }
+
+  // MARK: - Body
 
   var body: some View {
     ZStack {
@@ -71,14 +120,11 @@ struct HomeView: View {
               .stroke(Color.white.opacity(0.08))
           )
 
-          // MARK: - Quote card (focal point)
+          // MARK: - Quote card (focal point, no “What stood out…”)
           VStack(alignment: .leading, spacing: 14) {
             Text("TONIGHT’S REFLECTION")
               .font(.caption.smallCaps())
               .foregroundColor(.secondary)
-
-            Text("What stood out about today?")
-              .font(.title3.weight(.semibold))
 
             Text("“\(quote.text)”")
               .font(.title3.weight(.semibold))
@@ -126,11 +172,11 @@ struct HomeView: View {
           )
           .foregroundColor(.white)
 
-          // MARK: - Recent check-ins (static placeholders for now)
+          // MARK: - Recent mood check-ins (real data + placeholders)
           VStack(spacing: 12) {
-            recentRow(label: "Today • 10:34 PM", mood: "Grateful")
-            recentRow(label: "Yesterday", mood: "Hopeful")
-            recentRow(label: "This week", mood: "Mixed")
+            recentRow(title: "Today", entry: todayEntry)
+            recentRow(title: "Yesterday", entry: yesterdayEntry)
+            recentRow(title: "This week", entry: thisWeekEntry)
           }
 
           // MARK: - Primary actions
@@ -197,27 +243,45 @@ struct HomeView: View {
     }
   }
 
-  // MARK: - Helpers
+  // MARK: - Recent row helper
 
-  private func recentRow(label: String, mood: String) -> some View {
+  private func recentRow(title: String, entry: NightlyEntry?) -> some View {
     HStack {
       VStack(alignment: .leading, spacing: 2) {
-        Text(label)
-          .font(.subheadline)
-        Text(mood)
-          .font(.caption)
-          .foregroundColor(.secondary)
+        if let entry = entry {
+          Text("\(title) • \(timeString(for: entry.date))")
+            .font(.subheadline)
+          Text("Captured with Nightly")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        } else {
+          Text(title)
+            .font(.subheadline)
+          Text("No entry yet")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
       }
 
       Spacer()
 
-      HStack(spacing: 6) {
-        Circle()
-          .frame(width: 8, height: 8)
-        Text(mood)
-          .font(.caption.weight(.medium))
+      if let entry = entry {
+        HStack(spacing: 6) {
+          Text(entry.mood.emoji)
+          Text(entry.mood.label)
+            .font(.caption.weight(.medium))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+          Capsule()
+            .fill(Color.white.opacity(colorScheme == .dark ? 0.06 : 0.12))
+        )
+      } else {
+        Text("—")
+          .font(.caption)
+          .foregroundColor(.secondary)
       }
-      .foregroundColor(.secondary)
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 10)
@@ -235,5 +299,6 @@ struct HomeView: View {
 #Preview {
   NavigationStack {
     HomeView()
+      .environmentObject(NightlyStore())
   }
 }
