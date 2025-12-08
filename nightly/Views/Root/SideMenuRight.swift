@@ -27,27 +27,44 @@ struct SideMenuRight: View {
   }
 
   var body: some View {
-    VStack {
-      VStack(alignment: .leading, spacing: 10) {
+    ZStack(alignment: .trailing) {
+      VStack(alignment: .leading, spacing: 16) {
+        // Header row
         HStack(spacing: 10) {
           Image(systemName: "moon.stars.fill")
-          Text("nightly").font(.title3.weight(.semibold))
-        }
-        .padding(.bottom, 12)
-
-        ForEach(MenuItem.allCases) { item in
+          Text("nightly")
+            .font(.title3.weight(.semibold))
+          Spacer()
           Button {
             withAnimation(.easeInOut(duration: 0.2)) {
-              selection = item
+              isOpen = false
+            }
+          } label: {
+            Image(systemName: "xmark")
+              .font(.system(size: 16, weight: .semibold))
+              .padding(8)
+              .contentShape(Rectangle())
+          }
+        }
+        .padding(.bottom, 8)
+
+        // Menu items
+        ForEach(MenuItem.allCases) { item in
+          Button {
+            selection = item
+            withAnimation(.easeInOut(duration: 0.2)) {
               isOpen = false
             }
           } label: {
             HStack(spacing: 12) {
               Image(systemName: item.systemImage)
               Text(item.rawValue)
+                .font(.system(size: 17,
+                              weight: selection == item ? .semibold : .regular))
               Spacer()
               if item == selection {
-                Image(systemName: "checkmark").foregroundStyle(.secondary)
+                Image(systemName: "checkmark")
+                  .foregroundStyle(.secondary)
               }
             }
             .padding(12)
@@ -63,11 +80,11 @@ struct SideMenuRight: View {
       }
       .padding(.top, safeTopInset + 8)
       .padding(.horizontal, 16)
-      .frame(width: width, alignment: .topLeading)
-      .frame(maxHeight: .infinity)
+      .frame(width: width, alignment: .topLeading)   // ✅ valid
+      .frame(maxHeight: .infinity)                   // ✅ separate call
       .background(Color(.systemBackground))
       .shadow(radius: 10)
-      .offset(x: isOpen ? 0 : width)
+      .offset(x: isOpen ? 0 : width)                 // slide from right
       .animation(.easeInOut(duration: 0.2), value: isOpen)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)

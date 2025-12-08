@@ -1,54 +1,86 @@
 import SwiftUI
 
 struct ContentView: View {
-  @StateObject private var store = NightlyStore()
-  @State private var selection: MenuItem = .home   // 👈 default to Home
+  @EnvironmentObject var store: NightlyStore
+
+  @State private var selection: MenuItem = .home
   @State private var isMenuOpen: Bool = false
 
   var body: some View {
-    ZStack {
-      NavigationStack {
-        Group {
-          switch selection {
-            case .home:
-              HomeView().navigationTitle("")    // 👈 NEW
-            case .new:
-              NewNightlyView().navigationTitle("Nightly Inventory")
-            case .history:
-              HistoryView().navigationTitle("History")
-            case .sobriety:
-              SobrietyCounterView().navigationTitle("Sobriety Counter")
-            case .onAwakening:
-              OnAwakeningView().navigationTitle("On Awakening")
-            case .serenity:
-              SerenityPrayerView().navigationTitle("Serenity Prayer")
-          }
+    NavigationStack {
+      ZStack {
+        // Main content
+        mainContent
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .background(Color(.systemBackground))
+
+        // Dim background when menu is open
+        if isMenuOpen {
+          Color.black.opacity(0.3)
+            .ignoresSafeArea()
+            .zIndex(1)
+            .onTapGesture {
+              withAnimation(.easeInOut(duration: 0.25)) {
+                isMenuOpen = false
+              }
+            }
         }
-        .toolbar {
-          ToolbarItem(placement: .topBarTrailing) {
-            Button {
-              withAnimation(.easeInOut(duration: 0.2)) { isMenuOpen.toggle() }
-            } label: { Image(systemName: "line.3.horizontal") }
-            .accessibilityLabel("Menu")
+
+        // Right-side slide-out menu
+        SideMenuRight(isOpen: $isMenuOpen, selection: $selection)
+          .zIndex(2)
+      }
+      .navigationTitle(navigationTitle)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .navigationBarTrailing) {
+          Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+              isMenuOpen.toggle()
+            }
+          } label: {
+            Image(systemName: "line.3.horizontal")
+              .font(.system(size: 20, weight: .medium))
+              .padding(12)                 // bigger tap target on device
+              .contentShape(Rectangle())
           }
+          .accessibilityLabel("Menu")
         }
       }
-
-      if isMenuOpen {
-        Color.black.opacity(0.25)
-          .ignoresSafeArea()
-          .zIndex(1)
-          .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.2)) { isMenuOpen = false }
-          }
-      }
-
-      SideMenuRight(isOpen: $isMenuOpen, selection: $selection)
-        .zIndex(2)
     }
-    .environmentObject(store)
+  }
+
+  // MARK: - Main content by selection
+
+  @ViewBuilder
+  private var mainContent: some View {
+    switch selection {
+    case .home:
+      HomeView()
+    case .new:
+      NewNightlyView()
+    case .history:
+      HistoryView()
+    case .sobriety:
+      SobrietyCounterView()
+    case .onAwakening:
+      OnAwakeningView()
+    case .serenity:
+      SerenityPrayerView()
+    }
+  }
+
+  private var navigationTitle: String {
+    switch selection {
+    case .home:
+      return ""                // clean top for the home screen
+    default:
+      return selection.rawValue
+    }
   }
 }
 
-#Preview { ContentView() }
-
+#Preview {
+  ContentView()
+    .environmentObject(NightlyStore())
+}

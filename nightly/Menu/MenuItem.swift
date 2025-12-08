@@ -8,7 +8,7 @@
 import SwiftUI
 
 enum MenuItem: String, CaseIterable, Identifiable {
-  case home = "Home"              // 👈 NEW
+  case home = "Home"
   case new = "New Nightly"
   case history = "Past Nightlies"
   case sobriety = "Sobriety Counter"
@@ -19,7 +19,7 @@ enum MenuItem: String, CaseIterable, Identifiable {
 
   var systemImage: String {
     switch self {
-      case .home: return "house"   // 👈 NEW
+      case .home: return "house"   
       case .new: return "square.and.pencil"
       case .history: return "clock.arrow.circlepath"
       case .sobriety: return "heart.text.square"
