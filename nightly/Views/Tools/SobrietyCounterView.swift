@@ -15,8 +15,6 @@ struct SobrietyCounterView: View {
     // Animation state
     @State private var coinScale: CGFloat = 1.0
     @State private var coinRotation: Double = 0
-    @State private var coinGlowPhase: Double = 0
-    @State private var glowStarted: Bool = false
 
     // MARK: - Dates & intervals
 
@@ -165,6 +163,10 @@ struct SobrietyCounterView: View {
         .sheet(isPresented: $showingPicker) {
             datePickerSheet
         }
+        // Spin the coin once when you navigate to this page
+        .onAppear {
+            playAppearAnimation()
+        }
     }
 
     // MARK: - Top card (days + animated coin)
@@ -197,21 +199,21 @@ struct SobrietyCounterView: View {
             // RIGHT: animated coin image, if available
             if let name = chipImageName {
                 ZStack {
-                    // Glow behind the coin
+                    // Softer, static glow behind the coin
                     Circle()
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    Color.white.opacity(0.35),
+                                    Color.white.opacity(0.20),
                                     Color.white.opacity(0.0)
                                 ],
                                 center: .center,
                                 startRadius: 0,
-                                endRadius: 130
+                                endRadius: 120
                             )
                         )
-                        .scaleEffect(1.1 + 0.08 * CGFloat(sin(coinGlowPhase)))
-                        .opacity(0.7)
+                        .scaleEffect(1.05)
+                        .opacity(0.6)
 
                     // The coin image with spin + pop
                     Image(name)
@@ -223,15 +225,9 @@ struct SobrietyCounterView: View {
                             .degrees(coinRotation),
                             axis: (x: 0, y: 1, z: 0)
                         )
-                        .shadow(color: Color.white.opacity(0.8), radius: 18, x: 0, y: 0)
+                        .shadow(color: Color.white.opacity(0.6), radius: 14, x: 0, y: 0)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
-                .onAppear {
-                    startGlowIfNeeded()
-                }
-                .onChange(of: chipImageName) { _ in
-                    playMilestoneAnimation()
-                }
             } else {
                 // Placeholder circle if no valid sobriety yet
                 Circle()
@@ -258,35 +254,26 @@ struct SobrietyCounterView: View {
         )
     }
 
-    // MARK: - Animation helpers
+    // MARK: - Animation helper
 
-    private func startGlowIfNeeded() {
-        guard !glowStarted else { return }
-        glowStarted = true
-
-        withAnimation(
-            Animation.easeInOut(duration: 2.4)
-                .repeatForever(autoreverses: true)
-        ) {
-            coinGlowPhase = .pi * 2
-        }
-    }
-
-    private func playMilestoneAnimation() {
-        // Shrink a bit before popping
-        coinScale = 0.7
+    /// Called when the SobrietyCounterView appears.
+    /// Spins the coin once and gives it a little pop.
+    private func playAppearAnimation() {
+        // Reset state so it animates from the beginning each time
+        coinScale = 0.8
+        coinRotation = 0
 
         withAnimation(
-            .spring(response: 0.6, dampingFraction: 0.45, blendDuration: 0.2)
+            .spring(response: 0.7, dampingFraction: 0.6, blendDuration: 0.1)
         ) {
             coinScale = 1.2
-            coinRotation += 360
+            coinRotation = 360
         }
 
-        // Relax back to 1.0 scale
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        // Relax back toward normal size
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             withAnimation(
-                .spring(response: 0.6, dampingFraction: 0.75, blendDuration: 0.2)
+                .spring(response: 0.6, dampingFraction: 0.8, blendDuration: 0.1)
             ) {
                 coinScale = 1.0
             }
