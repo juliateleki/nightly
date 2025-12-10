@@ -4,11 +4,16 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct SobrietyCounterView: View {
     @AppStorage("sobrietyStart_ts") private var sobrietyStartTS: Double = 0
     @State private var showingPicker = false
     @State private var tempDate: Date = Date()
+
+    // For story sharing
+    @State private var showingStoryShare = false
+    @State private var storyImage: UIImage?
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -163,6 +168,11 @@ struct SobrietyCounterView: View {
         .sheet(isPresented: $showingPicker) {
             datePickerSheet
         }
+        .sheet(isPresented: $showingStoryShare) {
+            if let img = storyImage {
+                StoryShareSheet(image: img)
+            }
+        }
         // Spin the coin once when you navigate to this page
         .onAppear {
             playAppearAnimation()
@@ -199,21 +209,21 @@ struct SobrietyCounterView: View {
             // RIGHT: animated coin image, if available
             if let name = chipImageName {
                 ZStack {
-                    // Softer, static glow behind the coin
+                    // Softer, static glow behind the coin (reduced)
                     Circle()
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    Color.white.opacity(0.20),
+                                    Color.white.opacity(0.14),
                                     Color.white.opacity(0.0)
                                 ],
                                 center: .center,
                                 startRadius: 0,
-                                endRadius: 120
+                                endRadius: 105
                             )
                         )
-                        .scaleEffect(1.05)
-                        .opacity(0.6)
+                        .scaleEffect(1.02)
+                        .opacity(0.45)
 
                     // The coin image with spin + pop
                     Image(name)
@@ -225,9 +235,13 @@ struct SobrietyCounterView: View {
                             .degrees(coinRotation),
                             axis: (x: 0, y: 1, z: 0)
                         )
-                        .shadow(color: Color.white.opacity(0.6), radius: 14, x: 0, y: 0)
+                        .shadow(color: Color.white.opacity(0.35), radius: 10, x: 0, y: 0)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
+                // Tap to spin the coin
+                .onTapGesture {
+                    playTapAnimation()
+                }
             } else {
                 // Placeholder circle if no valid sobriety yet
                 Circle()
@@ -254,26 +268,42 @@ struct SobrietyCounterView: View {
         )
     }
 
-    // MARK: - Animation helper
+    // MARK: - Animation helpers
 
     /// Called when the SobrietyCounterView appears.
     /// Spins the coin once and gives it a little pop.
     private func playAppearAnimation() {
-        // Reset state so it animates from the beginning each time
-        coinScale = 0.8
+        coinScale = 0.85
         coinRotation = 0
 
         withAnimation(
-            .spring(response: 0.7, dampingFraction: 0.6, blendDuration: 0.1)
+            .spring(response: 0.7, dampingFraction: 0.65, blendDuration: 0.1)
         ) {
-            coinScale = 1.2
+            coinScale = 1.15
             coinRotation = 360
         }
 
-        // Relax back toward normal size
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             withAnimation(
-                .spring(response: 0.6, dampingFraction: 0.8, blendDuration: 0.1)
+                .spring(response: 0.6, dampingFraction: 0.85, blendDuration: 0.1)
+            ) {
+                coinScale = 1.0
+            }
+        }
+    }
+
+    /// Called when the user taps the coin – snappier spin.
+    private func playTapAnimation() {
+        withAnimation(
+            .spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.1)
+        ) {
+            coinScale = 1.15
+            coinRotation += 360
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(
+                .spring(response: 0.5, dampingFraction: 0.85, blendDuration: 0.1)
             ) {
                 coinScale = 1.0
             }
@@ -387,10 +417,12 @@ struct SobrietyCounterView: View {
         )
     }
 
-    // MARK: - Share section
+    // MARK: - Share section (text + story image)
 
     private var shareSection: some View {
         VStack(alignment: .leading, spacing: 10) {
+
+            // Text share (existing)
             ShareLink(item: shareMessage) {
                 HStack {
                     Image(systemName: "square.and.arrow.up")
@@ -416,7 +448,35 @@ struct SobrietyCounterView: View {
                 .foregroundColor(.white)
             }
 
-            Text("Celebrate your milestones with others.")
+            // Instagram-story-style share (image)
+            Button {
+                generateStoryImage()
+            } label: {
+                HStack {
+                    Image(systemName: "camera.viewfinder")
+                    Text("Create story image")
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(.systemTeal),
+                                    Color(.systemIndigo)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .foregroundColor(.white)
+            }
+
+            Text("Share your streak as a story or post.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -505,6 +565,129 @@ struct SobrietyCounterView: View {
             }
         }
     }
+
+    // MARK: - Story image creation
+
+    private func generateStoryImage() {
+        // 9:16 aspect, high-res
+        let size = CGSize(width: 1080, height: 1920)
+        let chipName = chipImageName
+
+        let view = StorySnapshotView(
+            days: totalDays,
+            months: totalMonthsInt,
+            years: totalYearsInt,
+            chipImageName: chipName
+        )
+
+        let image = snapshot(of: view, size: size)
+        self.storyImage = image
+        self.showingStoryShare = true
+    }
+}
+
+// MARK: - Story Snapshot View
+
+/// This is what gets rendered into an image for story sharing.
+struct StorySnapshotView: View {
+    let days: Int
+    let months: Int
+    let years: Int
+    let chipImageName: String?
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(.black),
+                    Color(.systemPurple),
+                    Color(.systemTeal)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 32) {
+                Spacer().frame(height: 80)
+
+                Text("Sober for")
+                    .font(.system(size: 40, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.85))
+
+                Text("\(days)")
+                    .font(.system(size: 120, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+
+                Text("day\(days == 1 ? "" : "s")")
+                    .font(.system(size: 38, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.9))
+
+                if let name = chipImageName {
+                    Image(name)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 420, height: 420)
+                        .shadow(color: .white.opacity(0.45), radius: 30, x: 0, y: 0)
+                        .padding(.top, 16)
+                }
+
+                if years > 0 || months > 0 {
+                    Text(extraDurationText)
+                        .font(.system(size: 26, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.9))
+                        .padding(.top, 12)
+                }
+
+                Spacer()
+
+                Text("Shared with Nightly")
+                    .font(.system(size: 20, weight: .regular, design: .rounded))
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(.bottom, 40)
+            }
+            .padding(.horizontal, 40)
+        }
+    }
+
+    private var extraDurationText: String {
+        if years > 0 {
+            return "\(years) year\(years == 1 ? "" : "s") sober"
+        } else if months > 0 {
+            return "\(months) month\(months == 1 ? "" : "s") sober"
+        } else {
+            return ""
+        }
+    }
+}
+
+// MARK: - Snapshot helper
+
+private func snapshot<V: View>(of view: V, size: CGSize) -> UIImage {
+    let controller = UIHostingController(rootView: view)
+    controller.view.bounds = CGRect(origin: .zero, size: size)
+    controller.view.backgroundColor = .clear
+
+    let renderer = UIGraphicsImageRenderer(size: size)
+    return renderer.image { _ in
+        controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
+    }
+}
+
+// MARK: - Share sheet wrapper
+
+struct StoryShareSheet: UIViewControllerRepresentable {
+    let image: UIImage
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let activityVC = UIActivityViewController(
+            activityItems: [image],
+            applicationActivities: nil
+        )
+        return activityVC
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {
