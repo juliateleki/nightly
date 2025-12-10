@@ -11,7 +11,7 @@ struct SobrietyCounterView: View {
     @State private var showingPicker = false
     @State private var tempDate: Date = Date()
 
-    // For story sharing
+    // For image sharing
     @State private var showingStoryShare = false
     @State private var storyImage: UIImage?
 
@@ -105,31 +105,6 @@ struct SobrietyCounterView: View {
             // 1 year and beyond → 1 year chip (for now)
             return "chip1yr"
         }
-    }
-
-    // Share message for ShareLink
-    private var shareMessage: String {
-        if !isValidSobriety {
-            return "I just started tracking my sobriety with Nightly."
-        }
-
-        var parts = ["I've been sober for \(totalDays) day\(totalDays == 1 ? "" : "s")"]
-
-        if totalYearsInt >= 1 {
-            parts.append("(\(totalYearsInt) year\(totalYearsInt == 1 ? "" : "s")).")
-        } else if totalMonthsInt >= 1 {
-            parts.append("(\(totalMonthsInt) month\(totalMonthsInt == 1 ? "" : "s")).")
-        }
-
-        if let start = sobrietyStart {
-            let df = DateFormatter()
-            df.dateStyle = .medium
-            parts.append("Sobriety date: \(df.string(from: start)).")
-        }
-
-        parts.append("#sober #onedayatatime")
-
-        return parts.joined(separator: " ")
     }
 
     // MARK: - Body
@@ -417,13 +392,13 @@ struct SobrietyCounterView: View {
         )
     }
 
-    // MARK: - Share section (text + story image)
+    // MARK: - Share section
 
     private var shareSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-
-            // Text share (existing)
-            ShareLink(item: shareMessage) {
+            Button {
+                generateStoryImage()
+            } label: {
                 HStack {
                     Image(systemName: "square.and.arrow.up")
                     Text("Share your progress")
@@ -448,35 +423,7 @@ struct SobrietyCounterView: View {
                 .foregroundColor(.white)
             }
 
-            // Instagram-story-style share (image)
-            Button {
-                generateStoryImage()
-            } label: {
-                HStack {
-                    Image(systemName: "camera.viewfinder")
-                    Text("Create story image")
-                        .fontWeight(.semibold)
-                    Spacer()
-                }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(.systemTeal),
-                                    Color(.systemIndigo)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                )
-                .foregroundColor(.white)
-            }
-
-            Text("Share your streak as a story or post.")
+            Text("Share an image of your sobriety counter.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -566,18 +513,19 @@ struct SobrietyCounterView: View {
         }
     }
 
-    // MARK: - Story image creation
+    // MARK: - Story image creation (matches device aspect ratio)
 
     private func generateStoryImage() {
-        // 9:16 aspect, high-res
-        let size = CGSize(width: 1080, height: 1920)
-        let chipName = chipImageName
+        // Use the current device's logical size so text scales like in the app
+        let size = UIScreen.main.bounds.size
 
         let view = StorySnapshotView(
-            days: totalDays,
-            months: totalMonthsInt,
-            years: totalYearsInt,
-            chipImageName: chipName
+            totalSeconds: totalSeconds,
+            totalHours: totalHours,
+            totalDays: totalDays,
+            totalMonthsApprox: totalMonthsApprox,
+            sobrietyStartFormatted: sobrietyStartFormatted,
+            chipImageName: chipImageName
         )
 
         let image = snapshot(of: view, size: size)
@@ -586,78 +534,209 @@ struct SobrietyCounterView: View {
     }
 }
 
-// MARK: - Story Snapshot View
+// MARK: - Story Snapshot View (matches app-like layout)
 
-/// This is what gets rendered into an image for story sharing.
+/// This is what gets rendered into an image for sharing.
+/// It mimics the sobriety counter view: top card + time chips + coin.
 struct StorySnapshotView: View {
-    let days: Int
-    let months: Int
-    let years: Int
+    let totalSeconds: Int
+    let totalHours: Int
+    let totalDays: Int
+    let totalMonthsApprox: Double
+    let sobrietyStartFormatted: String
     let chipImageName: String?
+
+    private func formattedNumber(_ value: Int) -> String {
+        let nf = NumberFormatter()
+        nf.numberStyle = .decimal
+        return nf.string(from: NSNumber(value: value)) ?? "\(value)"
+    }
 
     var body: some View {
         ZStack {
             LinearGradient(
                 colors: [
                     Color(.black),
-                    Color(.systemPurple),
-                    Color(.systemTeal)
+                    Color(.systemTeal).opacity(0.7)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 32) {
-                Spacer().frame(height: 80)
+            VStack(spacing: 24) {
+                Spacer().frame(height: 40)
 
-                Text("Sober for")
-                    .font(.system(size: 40, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.85))
+                // Top card (similar to app)
+                HStack(spacing: 20) {
+                    VStack(spacing: 10) {
+                        Text("Sober for")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary.opacity(0.9))
 
-                Text("\(days)")
-                    .font(.system(size: 120, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                        Text("\(totalDays)")
+                            .font(.system(size: 52, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
 
-                Text("day\(days == 1 ? "" : "s")")
-                    .font(.system(size: 38, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.9))
+                        Text("day\(totalDays == 1 ? "" : "s")")
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(.secondary.opacity(0.9))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
 
-                if let name = chipImageName {
-                    Image(name)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 420, height: 420)
-                        .shadow(color: .white.opacity(0.45), radius: 30, x: 0, y: 0)
-                        .padding(.top, 16)
+                    if let name = chipImageName {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    RadialGradient(
+                                        colors: [
+                                            Color.white.opacity(0.18),
+                                            Color.white.opacity(0.0)
+                                        ],
+                                        center: .center,
+                                        startRadius: 0,
+                                        endRadius: 110
+                                    )
+                                )
+                                .opacity(0.6)
+
+                            Image(name)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 170, height: 170)
+                                .shadow(color: .white.opacity(0.5), radius: 18, x: 0, y: 0)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    }
                 }
+                .padding(.vertical, 24)
+                .padding(.horizontal, 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(Color.white.opacity(0.10))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
 
-                if years > 0 || months > 0 {
-                    Text(extraDurationText)
-                        .font(.system(size: 26, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.9))
-                        .padding(.top, 12)
+                // Time chips section
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("Your time sober")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.secondary.opacity(0.9))
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        timeRow(
+                            icon: "sparkles",
+                            title: "Seconds",
+                            value: formattedNumber(totalSeconds),
+                            subtitle: "Every second counts"
+                        )
+                        timeRow(
+                            icon: "clock",
+                            title: "Hours",
+                            value: formattedNumber(totalHours),
+                            subtitle: "One hour at a time"
+                        )
+                        timeRow(
+                            icon: "sun.max",
+                            title: "Days",
+                            value: formattedNumber(totalDays),
+                            subtitle: "Showing up today"
+                        )
+                        timeRow(
+                            icon: "calendar",
+                            title: "Months (approx.)",
+                            value: String(format: "%.1f", totalMonthsApprox),
+                            subtitle: "A growing streak"
+                        )
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(22)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color.white.opacity(0.10))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                )
+
+                // Sober since line
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Sober since")
+                        .font(.footnote.weight(.medium))
+                        .foregroundColor(.secondary.opacity(0.9))
+
+                    Text(sobrietyStartFormatted)
+                        .font(.body.weight(.semibold))
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(Color.white.opacity(0.10))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                )
 
                 Spacer()
 
                 Text("Shared with Nightly")
-                    .font(.system(size: 20, weight: .regular, design: .rounded))
+                    .font(.footnote)
                     .foregroundColor(.white.opacity(0.8))
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 24)
             }
-            .padding(.horizontal, 40)
+            .padding(.horizontal, 24)
         }
     }
 
-    private var extraDurationText: String {
-        if years > 0 {
-            return "\(years) year\(years == 1 ? "" : "s") sober"
-        } else if months > 0 {
-            return "\(months) month\(months == 1 ? "" : "s") sober"
-        } else {
-            return ""
+    private func timeRow(icon: String, title: String, value: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(.systemPurple),
+                                Color(.systemBlue)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+            }
+            .frame(width: 40, height: 40)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary.opacity(0.9))
+            }
+
+            Spacer()
+
+            Text(value)
+                .font(.headline.monospacedDigit())
+                .foregroundColor(.primary)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.08))
+        )
     }
 }
 
@@ -680,11 +759,10 @@ struct StoryShareSheet: UIViewControllerRepresentable {
     let image: UIImage
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let activityVC = UIActivityViewController(
+        UIActivityViewController(
             activityItems: [image],
             applicationActivities: nil
         )
-        return activityVC
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
