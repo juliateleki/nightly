@@ -12,6 +12,12 @@ struct SobrietyCounterView: View {
 
     @Environment(\.colorScheme) private var colorScheme
 
+    // Animation state
+    @State private var coinScale: CGFloat = 1.0
+    @State private var coinRotation: Double = 0
+    @State private var coinGlowPhase: Double = 0
+    @State private var glowStarted: Bool = false
+
     // MARK: - Dates & intervals
 
     private var sobrietyStart: Date? {
@@ -65,39 +71,38 @@ struct SobrietyCounterView: View {
         return df.string(from: start)
     }
 
-  // MARK: - Chip image name
+    // MARK: - Chip image name (uses your filenames)
 
-  /// Chooses the chip asset name based on months / years,
-  /// using your actual filenames and milestone chips.
-  private var chipImageName: String? {
-      guard isValidSobriety else { return nil }
+    /// Chooses the chip asset name based on months / years,
+    /// using your actual filenames and milestone chips.
+    private var chipImageName: String? {
+        guard isValidSobriety else { return nil }
 
-      let m = totalMonthsInt
+        let m = totalMonthsInt
 
-      if m < 1 {
-          // under 1 month → 24 hours chip
-          return "chip24hrs"
-      } else if m < 2 {
-          // 1.x months → 1 month chip
-          return "chip1mon"
-      } else if m < 3 {
-          // 2.x months → 2 month chip
-          return "chip2mon"
-      } else if m < 6 {
-          // 3–5 months → 3 month chip
-          return "chip3mon"
-      } else if m < 9 {
-          // 6–8 months → 6 month chip
-          return "chip6mon"
-      } else if m < 12 {
-          // 9–11 months → 9 month chip
-          return "chip9mon"
-      } else {
-          // 1 year and beyond → 1 year chip (for now)
-          return "chip1yr"
-      }
-  }
-
+        if m < 1 {
+            // under 1 month → 24 hours chip
+            return "chip24hrs"
+        } else if m < 2 {
+            // 1.x months → 1 month chip
+            return "chip1mon"
+        } else if m < 3 {
+            // 2.x months → 2 month chip
+            return "chip2mon"
+        } else if m < 6 {
+            // 3–5 months → 3 month chip
+            return "chip3mon"
+        } else if m < 9 {
+            // 6–8 months → 6 month chip
+            return "chip6mon"
+        } else if m < 12 {
+            // 9–11 months → 9 month chip
+            return "chip9mon"
+        } else {
+            // 1 year and beyond → 1 year chip (for now)
+            return "chip1yr"
+        }
+    }
 
     // Share message for ShareLink
     private var shareMessage: String {
@@ -162,7 +167,7 @@ struct SobrietyCounterView: View {
         }
     }
 
-    // MARK: - Top card (days + coin)
+    // MARK: - Top card (days + animated coin)
 
     private var topCard: some View {
         HStack(spacing: 20) {
@@ -189,14 +194,44 @@ struct SobrietyCounterView: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
-            // RIGHT: coin image, if available
+            // RIGHT: animated coin image, if available
             if let name = chipImageName {
-                Image(name)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 140, height: 140)
-                    .shadow(radius: 16)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                ZStack {
+                    // Glow behind the coin
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Color.white.opacity(0.35),
+                                    Color.white.opacity(0.0)
+                                ],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 130
+                            )
+                        )
+                        .scaleEffect(1.1 + 0.08 * CGFloat(sin(coinGlowPhase)))
+                        .opacity(0.7)
+
+                    // The coin image with spin + pop
+                    Image(name)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 140, height: 140)
+                        .scaleEffect(coinScale)
+                        .rotation3DEffect(
+                            .degrees(coinRotation),
+                            axis: (x: 0, y: 1, z: 0)
+                        )
+                        .shadow(color: Color.white.opacity(0.8), radius: 18, x: 0, y: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .onAppear {
+                    startGlowIfNeeded()
+                }
+                .onChange(of: chipImageName) { _ in
+                    playMilestoneAnimation()
+                }
             } else {
                 // Placeholder circle if no valid sobriety yet
                 Circle()
@@ -221,6 +256,41 @@ struct SobrietyCounterView: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(Color.white.opacity(0.10), lineWidth: 1)
         )
+    }
+
+    // MARK: - Animation helpers
+
+    private func startGlowIfNeeded() {
+        guard !glowStarted else { return }
+        glowStarted = true
+
+        withAnimation(
+            Animation.easeInOut(duration: 2.4)
+                .repeatForever(autoreverses: true)
+        ) {
+            coinGlowPhase = .pi * 2
+        }
+    }
+
+    private func playMilestoneAnimation() {
+        // Shrink a bit before popping
+        coinScale = 0.7
+
+        withAnimation(
+            .spring(response: 0.6, dampingFraction: 0.45, blendDuration: 0.2)
+        ) {
+            coinScale = 1.2
+            coinRotation += 360
+        }
+
+        // Relax back to 1.0 scale
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(
+                .spring(response: 0.6, dampingFraction: 0.75, blendDuration: 0.2)
+            ) {
+                coinScale = 1.0
+            }
+        }
     }
 
     // MARK: - Time chips
