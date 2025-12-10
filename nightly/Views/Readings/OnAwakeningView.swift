@@ -3,7 +3,7 @@
 //  nightly
 //
 //  Created by Julia Teleki on 9/17/25.
-//  Updated styling with gradient background + card layout
+//  Updated styling with gradient background + card layout + phrase highlights
 //
 
 import SwiftUI
@@ -65,11 +65,8 @@ struct OnAwakeningView: View {
                 .font(.caption.smallCaps())
                 .foregroundStyle(.secondary)
 
-            Text(text)
-                .font(.body)
-                .lineSpacing(6)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // Highlight key AA phrases if they appear in the text
+            HighlightedOnAwakeningText(text: text)
         }
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -84,3 +81,38 @@ struct OnAwakeningView: View {
     }
 }
 
+// MARK: - Highlighted Text Helper
+
+struct HighlightedOnAwakeningText: View {
+    let text: String
+
+    var body: some View {
+        Text(makeAttributedString())
+            .lineSpacing(6)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func makeAttributedString() -> AttributedString {
+        var attributed = AttributedString(text)
+        // Base font for the whole reading
+        attributed.font = .body
+
+        // Phrases we want to gently emphasize if they exist in the text
+        let phrases: [String] = [
+            "Thy will be done",
+            "It works - it really does",
+            "faith without works is dead"
+        ]
+
+        for phrase in phrases {
+            if let range = attributed.range(of: phrase, options: [.caseInsensitive]) {
+                attributed[range].font = .headline.bold()
+                // Optional: slightly accent color; comment this out if you prefer all-white
+                // attributed[range].foregroundColor = .accentColor
+            }
+        }
+
+        return attributed
+    }
+}
