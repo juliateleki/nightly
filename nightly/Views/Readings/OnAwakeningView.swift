@@ -3,7 +3,7 @@
 //  nightly
 //
 //  Created by Julia Teleki on 9/17/25.
-//  Updated styling with gradient background + card layout + phrase highlights
+//  Updated styling with gradient background + card layout + inline highlights
 //
 
 import SwiftUI
@@ -65,7 +65,6 @@ struct OnAwakeningView: View {
                 .font(.caption.smallCaps())
                 .foregroundStyle(.secondary)
 
-            // Highlight key AA phrases if they appear in the text
             HighlightedOnAwakeningText(text: text)
         }
         .padding(22)
@@ -81,7 +80,7 @@ struct OnAwakeningView: View {
     }
 }
 
-// MARK: - Highlighted Text Helper
+// MARK: - Inline Highlighted Text
 
 struct HighlightedOnAwakeningText: View {
     let text: String
@@ -98,7 +97,7 @@ struct HighlightedOnAwakeningText: View {
         // Base font for the whole reading
         attributed.font = .body
 
-        // Phrases we want to gently emphasize if they exist in the text
+        // Phrases we want to emphasize
         let phrases: [String] = [
             "Thy will be done",
             "It works - it really does",
@@ -107,9 +106,9 @@ struct HighlightedOnAwakeningText: View {
 
         for phrase in phrases {
             if let range = attributed.range(of: phrase, options: [.caseInsensitive]) {
+                // Make these stand out more than just bold:
                 attributed[range].font = .headline.bold()
-                // Optional: slightly accent color; comment this out if you prefer all-white
-                // attributed[range].foregroundColor = .accentColor
+                attributed[range].foregroundColor = .accentColor
             }
         }
 
