@@ -41,7 +41,6 @@ struct SobrietyCounterView: View {
         totalSeconds / (60 * 60)
     }
 
-    // Calendar-based full months between start and now
     private var totalMonthsInt: Int {
         guard let start = sobrietyStart, isValidSobriety else { return 0 }
         let comps = Calendar.current.dateComponents([.month], from: start, to: now)
@@ -52,7 +51,6 @@ struct SobrietyCounterView: View {
         totalMonthsInt / 12
     }
 
-    // Approximate months for UI chips
     private var totalMonthsApprox: Double {
         guard isValidSobriety else { return 0 }
         let days = Double(totalDays)
@@ -67,7 +65,41 @@ struct SobrietyCounterView: View {
         return df.string(from: start)
     }
 
-    // Share message
+  // MARK: - Chip image name
+
+  /// Chooses the chip asset name based on months / years,
+  /// using your actual filenames and milestone chips.
+  private var chipImageName: String? {
+      guard isValidSobriety else { return nil }
+
+      let m = totalMonthsInt
+
+      if m < 1 {
+          // under 1 month → 24 hours chip
+          return "chip24hrs"
+      } else if m < 2 {
+          // 1.x months → 1 month chip
+          return "chip1mon"
+      } else if m < 3 {
+          // 2.x months → 2 month chip
+          return "chip2mon"
+      } else if m < 6 {
+          // 3–5 months → 3 month chip
+          return "chip3mon"
+      } else if m < 9 {
+          // 6–8 months → 6 month chip
+          return "chip6mon"
+      } else if m < 12 {
+          // 9–11 months → 9 month chip
+          return "chip9mon"
+      } else {
+          // 1 year and beyond → 1 year chip (for now)
+          return "chip1yr"
+      }
+  }
+
+
+    // Share message for ShareLink
     private var shareMessage: String {
         if !isValidSobriety {
             return "I just started tracking my sobriety with Nightly."
@@ -99,7 +131,7 @@ struct SobrietyCounterView: View {
             LinearGradient(
                 colors: [
                     Color(.black),
-                    Color(.systemTeal).opacity(0.5)
+                    Color(.systemTeal).opacity(0.6)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -109,7 +141,7 @@ struct SobrietyCounterView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
 
-                    daysAndCoinCard
+                    topCard
 
                     if isValidSobriety {
                         timeChipsSection
@@ -119,7 +151,7 @@ struct SobrietyCounterView: View {
 
                     shareSection
 
-                    Spacer(minLength: 12)
+                    Spacer(minLength: 20)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 32)
@@ -130,11 +162,11 @@ struct SobrietyCounterView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Top card (days + coin)
 
-    private var daysAndCoinCard: some View {
+    private var topCard: some View {
         HStack(spacing: 20) {
-
+            // LEFT: big day counter
             VStack(spacing: 10) {
                 Text("Sober for")
                     .font(.subheadline)
@@ -152,23 +184,31 @@ struct SobrietyCounterView: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
+                        .padding(.top, 4)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
-            if isValidSobriety {
-                SobrietyChipView(months: totalMonthsInt)
+            // RIGHT: coin image, if available
+            if let name = chipImageName {
+                Image(name)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 140, height: 140)
+                    .shadow(radius: 16)
                     .frame(maxWidth: .infinity, alignment: .center)
             } else {
+                // Placeholder circle if no valid sobriety yet
                 Circle()
                     .strokeBorder(Color.white.opacity(0.25), lineWidth: 2)
                     .frame(width: 120, height: 120)
                     .overlay(
-                        Text("Set\ndate")
+                        Text("Set\nDate")
                             .font(.caption.weight(.semibold))
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
                     )
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .padding(.vertical, 24)
@@ -183,6 +223,8 @@ struct SobrietyCounterView: View {
         )
     }
 
+    // MARK: - Time chips
+
     private var timeChipsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Your time sober")
@@ -190,10 +232,30 @@ struct SobrietyCounterView: View {
                 .foregroundColor(.secondary)
 
             VStack(alignment: .leading, spacing: 10) {
-                chipRow(icon: "sparkles", title: "Seconds", value: formattedNumber(totalSeconds), subtitle: "Every second counts")
-                chipRow(icon: "clock", title: "Hours", value: formattedNumber(totalHours), subtitle: "One hour at a time")
-                chipRow(icon: "sun.max", title: "Days", value: formattedNumber(totalDays), subtitle: "Showing up today")
-                chipRow(icon: "calendar", title: "Months (approx.)", value: String(format: "%.1f", totalMonthsApprox), subtitle: "A growing streak")
+                chipRow(
+                    icon: "sparkles",
+                    title: "Seconds",
+                    value: formattedNumber(totalSeconds),
+                    subtitle: "Every second counts"
+                )
+                chipRow(
+                    icon: "clock",
+                    title: "Hours",
+                    value: formattedNumber(totalHours),
+                    subtitle: "One hour at a time"
+                )
+                chipRow(
+                    icon: "sun.max",
+                    title: "Days",
+                    value: formattedNumber(totalDays),
+                    subtitle: "Showing up today"
+                )
+                chipRow(
+                    icon: "calendar",
+                    title: "Months (approx.)",
+                    value: String(format: "%.1f", totalMonthsApprox),
+                    subtitle: "A growing streak"
+                )
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -207,6 +269,8 @@ struct SobrietyCounterView: View {
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
+
+    // MARK: - Sober since card
 
     private var soberSinceCard: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -250,7 +314,7 @@ struct SobrietyCounterView: View {
                 }
             }
 
-            Text("Nightly tracks your savings and recalculates your sobriety streak automatically.")
+            Text("Nightly recalculates your sobriety streak automatically as your date changes.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -265,6 +329,8 @@ struct SobrietyCounterView: View {
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
+
+    // MARK: - Share section
 
     private var shareSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -299,7 +365,7 @@ struct SobrietyCounterView: View {
         }
     }
 
-    // MARK: - Row builder
+    // MARK: - Helpers
 
     private func chipRow(icon: String, title: String, value: String, subtitle: String) -> some View {
         HStack(spacing: 12) {
@@ -342,7 +408,13 @@ struct SobrietyCounterView: View {
         )
     }
 
-    // MARK: - Date Picker
+    private func formattedNumber(_ value: Int) -> String {
+        let nf = NumberFormatter()
+        nf.numberStyle = .decimal
+        return nf.string(from: NSNumber(value: value)) ?? "\(value)"
+    }
+
+    // MARK: - Date picker sheet
 
     private var datePickerSheet: some View {
         NavigationStack {
@@ -358,11 +430,13 @@ struct SobrietyCounterView: View {
 
                 Spacer()
             }
-            .navigationTitle("Set Sobriety Date")
+            .navigationTitle("Set Date")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { showingPicker = false }
+                    Button("Cancel") {
+                        showingPicker = false
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
@@ -374,191 +448,10 @@ struct SobrietyCounterView: View {
             }
         }
     }
-
-    private func formattedNumber(_ value: Int) -> String {
-        let nf = NumberFormatter()
-        nf.numberStyle = .decimal
-        return nf.string(from: NSNumber(value: value)) ?? "\(value)"
-    }
-}
-
-// MARK: - Triangle Shape
-
-private struct Triangle: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let top = CGPoint(x: rect.midX, y: rect.minY + rect.height * 0.15)
-        let left = CGPoint(x: rect.minX + rect.width * 0.18, y: rect.maxY - rect.height * 0.18)
-        let right = CGPoint(x: rect.maxX - rect.width * 0.18, y: rect.maxY - rect.height * 0.18)
-
-        path.move(to: top)
-        path.addLine(to: left)
-        path.addLine(to: right)
-        path.addLine(to: top)
-        return path
-    }
-}
-
-// MARK: - Curved text helper
-
-private struct ArcText: View {
-    let text: String
-    let radius: CGFloat
-    let startAngle: Angle
-    let endAngle: Angle
-
-    var body: some View {
-        GeometryReader { geo in
-            let chars = Array(text)
-            let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            let start = startAngle.radians
-            let end = endAngle.radians
-            let count = max(chars.count - 1, 1)
-            let step = (end - start) / Double(count)
-
-            ZStack {
-                ForEach(Array(chars.enumerated()), id: \.offset) { index, char in
-                    let angle = start + Double(index) * step
-                    let x = center.x + radius * cos(angle)
-                    let y = center.y + radius * sin(angle)
-
-                    Text(String(char))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundColor(.white)
-                        .position(x: x, y: y)
-                        .rotationEffect(Angle(radians: angle + .pi / 2))
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Sobriety coin view
-
-private struct SobrietyChipView: View {
-    let months: Int
-
-    private var centerNumberText: String {
-        if months < 1 {
-            return "24"
-        } else if months < 12 {
-            return "\(months)"
-        } else {
-            let years = max(1, months / 12)
-            return "\(min(years, 50))"
-        }
-    }
-
-    private var bottomLabelText: String {
-        if months < 1 {
-            return "HOURS"
-        } else if months < 12 {
-            return "MONTHS"
-        } else {
-            return "YEARS"
-        }
-    }
-
-    private func gradientColors() -> [Color] {
-        if months < 1 { return [Color(.systemGray3), Color(.systemGray5)] }
-        switch months {
-        case 1: return [Color(red: 0.95, green: 0.25, blue: 0.25), Color(red: 0.70, green: 0.05, blue: 0.05)]
-        case 2: return [Color(red: 0.98, green: 0.85, blue: 0.35), Color(red: 0.90, green: 0.70, blue: 0.10)]
-        case 3: return [Color(red: 0.10, green: 0.55, blue: 0.30), Color(red: 0.03, green: 0.30, blue: 0.18)]
-        case 4: return [Color(red: 0.98, green: 0.88, blue: 0.40), Color(red: 0.86, green: 0.75, blue: 0.20)]
-        case 5: return [Color(red: 0.90, green: 0.15, blue: 0.25), Color(red: 0.60, green: 0.05, blue: 0.10)]
-        case 6: return [Color(red: 0.15, green: 0.35, blue: 0.90), Color(red: 0.05, green: 0.10, blue: 0.50)]
-        case 7: return [Color.purple, Color(red: 0.35, green: 0.00, blue: 0.60)]
-        case 8: return [Color.orange, Color(red: 0.90, green: 0.40, blue: 0.05)]
-        case 9: return [Color(red: 0.85, green: 0.30, blue: 0.85), Color(red: 0.55, green: 0.10, blue: 0.60)]
-        case 10: return [Color(red: 0.05, green: 0.55, blue: 0.35), Color(red: 0.02, green: 0.30, blue: 0.20)]
-        case 11: return [Color(red: 0.85, green: 0.10, blue: 0.10), Color(red: 0.55, green: 0.05, blue: 0.05)]
-        default: return [Color(.systemTeal), Color(.systemBlue)]
-        }
-    }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: gradientColors(),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(color: .black.opacity(0.45), radius: 10, x: 0, y: 4)
-
-            Circle()
-                .stroke(Color.white.opacity(0.55), lineWidth: 2.5)
-
-            Triangle()
-                .stroke(Color.white.opacity(0.8), lineWidth: 2)
-                .padding(22)
-
-            Circle()
-                .fill(Color.white.opacity(0.12))
-                .frame(width: 52, height: 52)
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
-                )
-                .overlay(
-                    Text(centerNumberText)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                )
-
-            ArcText(
-                text: "TO THINE OWN SELF BE TRUE",
-                radius: 62,
-                startAngle: .degrees(-160),
-                endAngle: .degrees(-20)
-            )
-
-            VStack {
-                Text("UNITY")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundColor(.white)
-                Spacer()
-            }
-            .padding(.top, 35)
-
-            VStack {
-                Spacer()
-                Text(bottomLabelText)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundColor(.white)
-                    .padding(.bottom, 14)
-            }
-
-            HStack {
-                VStack {
-                    Spacer()
-                    Text("RECOVERY")
-                        .font(.caption2.weight(.semibold))
-                        .rotationEffect(.degrees(-38))
-                        .foregroundColor(.white)
-                }
-                Spacer()
-                VStack {
-                    Spacer()
-                    Text("SERVICE")
-                        .font(.caption2.weight(.semibold))
-                        .rotationEffect(.degrees(38))
-                        .foregroundColor(.white)
-                }
-            }
-            .padding(.bottom, 36)
-            .padding(.horizontal, 18)
-        }
-        .frame(width: 140, height: 140)
-    }
 }
 
 #Preview {
     NavigationStack {
         SobrietyCounterView()
-            .environmentObject(NightlyStore())
     }
 }
