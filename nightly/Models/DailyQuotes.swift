@@ -13,8 +13,11 @@ struct DailyQuote: Equatable, Codable {
 }
 
 enum DailyQuotes {
-  // 31 short, original lines (edit/extend freely)
+
+  // Original, short reflections written for Nightly
   static let all: [DailyQuote] = [
+
+    // Existing
     .init(text: "Small steps compound into big change.", author: "Nightly"),
     .init(text: "Consistency beats intensity when intensity quits.", author: "Nightly"),
     .init(text: "Done imperfectly is better than perfectly imagined.", author: "Nightly"),
@@ -45,7 +48,38 @@ enum DailyQuotes {
     .init(text: "Leave places and people a little better.", author: "Nightly"),
     .init(text: "Quiet mornings, strong days.", author: "Nightly"),
     .init(text: "Gratitude turns enough into plenty.", author: "Nightly"),
-    .init(text: "You grow in the direction of your questions.", author: "Nightly")
+    .init(text: "You grow in the direction of your questions.", author: "Nightly"),
+
+    // NEW — calm, reflective, recovery-friendly
+    .init(text: "Today does not require everything from you.", author: "Nightly"),
+    .init(text: "Slow progress is still progress.", author: "Nightly"),
+    .init(text: "Peace comes from fewer, clearer choices.", author: "Nightly"),
+    .init(text: "You can begin again without erasing yesterday.", author: "Nightly"),
+    .init(text: "Stability is built through small promises kept.", author: "Nightly"),
+    .init(text: "Awareness is already a form of change.", author: "Nightly"),
+    .init(text: "Some days are about maintenance, not growth.", author: "Nightly"),
+    .init(text: "You don’t have to solve your whole life tonight.", author: "Nightly"),
+    .init(text: "Calm is a skill you can practice.", author: "Nightly"),
+    .init(text: "Showing up counts, even quietly.", author: "Nightly"),
+    .init(text: "Progress is rarely loud.", author: "Nightly"),
+    .init(text: "Breathe first. Decide second.", author: "Nightly"),
+    .init(text: "You are not behind—just becoming.", author: "Nightly"),
+    .init(text: "Less pressure invites better choices.", author: "Nightly"),
+    .init(text: "Your nervous system deserves gentleness.", author: "Nightly"),
+    .init(text: "Healing is not linear, and that’s okay.", author: "Nightly"),
+    .init(text: "Today can be simple and still be enough.", author: "Nightly"),
+    .init(text: "The next right thing is rarely dramatic.", author: "Nightly"),
+    .init(text: "You are allowed to move at your own pace.", author: "Nightly"),
+    .init(text: "Quiet consistency outlasts motivation.", author: "Nightly"),
+    .init(text: "Not everything needs a reaction.", author: "Nightly"),
+    .init(text: "Safety comes from routine and honesty.", author: "Nightly"),
+    .init(text: "You can choose steadiness over urgency.", author: "Nightly"),
+    .init(text: "This moment does not define the whole day.", author: "Nightly"),
+    .init(text: "Gentle structure creates freedom.", author: "Nightly"),
+    .init(text: "You are building something even on slow days.", author: "Nightly"),
+    .init(text: "Presence is more useful than pressure.", author: "Nightly"),
+    .init(text: "You don’t need to earn rest.", author: "Nightly"),
+    .init(text: "Clarity grows when you slow the noise.", author: "Nightly")
   ]
 
   /// Deterministic daily quote (changes each calendar day).
