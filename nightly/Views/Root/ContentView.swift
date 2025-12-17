@@ -48,6 +48,9 @@ struct ContentView: View {
         }
       }
     }
+    // Nightly is intentionally a dark, low-glare experience.
+    // This also improves text contrast on iPad (including iPhone-compatibility mode).
+    .preferredColorScheme(.dark)
   }
 
   // MARK: - Main content by selection

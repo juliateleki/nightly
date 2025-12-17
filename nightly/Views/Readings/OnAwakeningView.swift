@@ -10,6 +10,7 @@ import SwiftUI
 
 struct OnAwakeningView: View {
     @Environment(\.colorScheme) private var colorScheme
+    private let isPad = UIDevice.current.userInterfaceIdiom == .pad
 
     private let text = OnAwakening.text
 
@@ -50,20 +51,21 @@ struct OnAwakeningView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("On Awakening")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .font(isPad ? .largeTitle.bold() : .title.bold())
 
             Text("Morning meditation from Alcoholics Anonymous")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(isPad ? .title3 : .subheadline)
+                .foregroundStyle(Color.white.opacity(0.78))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(.white)
     }
 
     private var readingCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Reading")
                 .font(.caption.smallCaps())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.white.opacity(0.78))
 
             HighlightedOnAwakeningText(text: text)
         }
@@ -71,12 +73,13 @@ struct OnAwakeningView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.14))
+                .fill(Color.white.opacity(colorScheme == .dark ? 0.14 : 0.20))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
         )
+        .foregroundStyle(.white)
     }
 }
 
@@ -84,6 +87,9 @@ struct OnAwakeningView: View {
 
 struct HighlightedOnAwakeningText: View {
     let text: String
+
+    @ScaledMetric(relativeTo: .body) private var bodySize: CGFloat = 17
+    private let isPad = UIDevice.current.userInterfaceIdiom == .pad
 
     var body: some View {
         Text(makeAttributedString())
@@ -95,7 +101,8 @@ struct HighlightedOnAwakeningText: View {
     private func makeAttributedString() -> AttributedString {
         var attributed = AttributedString(text)
         // Base font for the whole reading
-        attributed.font = .body
+        let base = Font.system(size: isPad ? bodySize + 2 : bodySize)
+        attributed.font = base
 
         // Phrases we want to emphasize
         let phrases: [String] = [
@@ -107,8 +114,8 @@ struct HighlightedOnAwakeningText: View {
         for phrase in phrases {
             if let range = attributed.range(of: phrase, options: [.caseInsensitive]) {
                 // Make these stand out more than just bold:
-                attributed[range].font = .headline.bold()
-                attributed[range].foregroundColor = .accentColor
+                attributed[range].font = Font.system(size: isPad ? bodySize + 4 : bodySize + 2, weight: .semibold)
+                attributed[range].foregroundColor = .white
             }
         }
 

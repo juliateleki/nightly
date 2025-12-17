@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var store: NightlyStore
     @Environment(\.colorScheme) private var colorScheme
+    private let isPad = UIDevice.current.userInterfaceIdiom == .pad
 
     private let quote = DailyQuotes.quote()
 
@@ -158,13 +159,13 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text("Nightly")
-                            .font(.headline.weight(.semibold))
+                            .font((isPad ? Font.title3 : Font.headline).weight(.semibold))
                         Text("🌙")
                     }
 
                     Text("One quiet check-in before sleep.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .font(isPad ? .callout : .subheadline)
+                        .foregroundStyle(Color.white.opacity(0.78))
                 }
 
                 Spacer()
@@ -181,7 +182,7 @@ struct HomeView: View {
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(Color.white.opacity(colorScheme == .dark ? 0.06 : 0.12))
+                        .fill(Color.white.opacity(0.14))
                 )
             }
         }
@@ -189,19 +190,20 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(Color.white.opacity(colorScheme == .dark ? 0.06 : 0.12))
+                .fill(Color.white.opacity(0.12))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.white.opacity(0.08))
+                .stroke(Color.white.opacity(0.14))
         )
+        .foregroundStyle(.white)
     }
 
     private var quoteCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("TONIGHT’S REFLECTION")
                 .font(.caption.smallCaps())
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.white.opacity(0.78))
 
             Text("“\(quote.text)”")
                 .font(.title3.weight(.semibold))
@@ -210,12 +212,12 @@ struct HomeView: View {
             if let author = quote.author, !author.isEmpty {
                 Text("— \(author)")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.white.opacity(0.78))
             }
 
             Text("Nightly gives you gentle questions to help you slow down, process your day, and capture the moments you don’t want to forget.")
                 .font(.footnote)
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.white.opacity(0.78))
                 .padding(.top, 4)
         }
         .padding(20)
@@ -294,11 +296,11 @@ struct HomeView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+                .fill(Color.white.opacity(0.11))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
         )
     }
 
@@ -345,11 +347,11 @@ struct HomeView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+                .fill(Color.white.opacity(0.11))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
         )
     }
 
@@ -392,13 +394,13 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .background(
                     Capsule()
-                        .fill(Color.white.opacity(colorScheme == .dark ? 0.06 : 0.10))
+                        .fill(Color.white.opacity(0.12))
                 )
                 .overlay(
                     Capsule()
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
                 )
-                .foregroundColor(.primary)
+                .foregroundColor(.white)
             }
         }
     }
@@ -409,7 +411,7 @@ struct HomeView: View {
                 .font(.caption)
             Text("Private & stored on this device only.")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.white.opacity(0.70))
         }
         .padding(.top, 4)
         .frame(maxWidth: .infinity, alignment: .center)

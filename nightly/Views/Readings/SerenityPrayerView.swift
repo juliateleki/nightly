@@ -10,6 +10,7 @@ import SwiftUI
 
 struct SerenityPrayerView: View {
     @Environment(\.colorScheme) private var colorScheme
+    private let isPad = UIDevice.current.userInterfaceIdiom == .pad
 
     private let prayer = SerenityPrayer.text
 
@@ -50,19 +51,20 @@ struct SerenityPrayerView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Serenity Prayer")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .font(isPad ? .largeTitle.bold() : .title.bold())
 
             Text("A short prayer for acceptance, courage, and wisdom")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(isPad ? .title3 : .subheadline)
+                .foregroundStyle(Color.white.opacity(0.78))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(.white)
     }
 
     private var prayerCard: some View {
         VStack(alignment: .center, spacing: 18) {
             Text(prayer)
-                .font(.title3.weight(.semibold))
+                .font(isPad ? .title2.weight(.semibold) : .title3.weight(.semibold))
                 .multilineTextAlignment(.center)
                 .lineSpacing(8)
                 .textSelection(.enabled)
@@ -72,18 +74,19 @@ struct SerenityPrayerView: View {
 
             Text("Take a breath, read slowly, and let the words land.")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.white.opacity(0.78))
                 .multilineTextAlignment(.center)
         }
         .padding(24)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(colorScheme == .dark ? 0.10 : 0.16))
+                .fill(Color.white.opacity(colorScheme == .dark ? 0.14 : 0.20))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
         )
+        .foregroundStyle(.white)
     }
 }
